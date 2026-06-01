@@ -1,5 +1,4 @@
 import axios from "axios"
-import { Buffer } from "buffer"
 export const loadTab = async (tab: chrome.tabs.Tab) => {
   return new Promise((resolve) => {
     const listener = (tabId: number, changeInfo: any) => {
@@ -66,104 +65,6 @@ export const decodeCapcha = async (base64img: string) => {
     return response.data.pic_str
   } catch (error) {
     console.error('Error in getCaptchacode:', error)
-    return null
-  }
-}
-
-// Get cookies from current tab
-export const getCookiesEPB = async () => {
-  try {
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    })
-    const url1 = "https://www.eptrade.cn/epb/login/scno_direct_bk.html"
-    const url = "https://www.eptrade.cn/epb/index.jsp"
-
-    // Load URL
-    await chrome.tabs.update(tab.id, { url })
-    // Wait for tab to load
-    // await loadTab(tab)
-    // Check url 
-    const currentUrl = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    })
-    if (currentUrl[0]?.url?.includes('login')) {
-      await chrome.tabs.update(tab.id, { url: url1 })
-      await loadTab(tab)
-      // Action Login
-      const urlImg = await chrome.scripting.executeScript({
-        target: { tabId: tab.id as number },
-        func: async () => {
-          try {
-            console.log("Start action login....")
-            const tabLogin = document.querySelectorAll(".tabs-title") as NodeListOf<Element>
-            if (tabLogin) (tabLogin[1] as HTMLAnchorElement).click()
-
-            const username = document.querySelector("#user_id") as HTMLInputElement
-            if (username) username.value = "CN122887"
-            const password = document.querySelector("#user_pwd") as HTMLInputElement
-            if (password) password.value = "imND3I26"
-            const capchaCodeImg = document.querySelector("#safecode") as HTMLButtonElement
-            if (capchaCodeImg) {
-              const urlImg = capchaCodeImg.getAttribute("src")
-              return urlImg
-            }
-          } catch (error) {
-            console.error("Error login in the page", error)
-          }
-        },
-      })
-      await delay(1000)
-
-      // Decode capcha code
-      const toBase64 = await axios.get(`https://www.eptrade.cn/epb/login/${urlImg[0].result}`, { responseType: "arraybuffer" })
-      const capchaCode = await decodeCapcha(
-        Buffer.from(toBase64.data, "binary").toString("base64")
-      )
-      if (!capchaCode) {
-        showToast("Please login to the system!", "warning")
-        return
-      }
-
-      const resultLogin = await chrome.scripting.executeScript({
-        target: { tabId: tab.id as number },
-        func: async (capchaCode: string) => {
-          try {
-            const capchaCodeInput = document.querySelector("#login2 > table > tbody > tr:nth-child(3) > td:nth-child(1) > input") as HTMLInputElement
-            if (capchaCodeInput) capchaCodeInput.value = capchaCode
-
-            const loginBtn = document.querySelector("#btnLogin") as HTMLButtonElement
-            if (loginBtn) loginBtn.click()
-            return true
-          } catch (error) {
-            console.error("Error login in the page", error)
-            return false
-          }
-        },
-        args: [capchaCode],
-      })
-      console.log("resultLogin", resultLogin)
-      if (!resultLogin[0].result) {
-        showToast("Please start again or login to the system!", "warning")
-        return
-      }
-    }
-
-    // Wait for tab to load
-    await loadTab(tab)
-
-    // Get header cookie from website
-    const headerCookie = await chrome.cookies.getAll({
-      url: "https://www.eptrade.cn/epb",
-    })
-
-    // Get yitong order data
-    const cookies = headerCookie.map((c: any) => `${c.name}=${c.value}`).join('; ')
-    return cookies
-  } catch (error) {
-    console.error('Error in getCookies:', error)
     return null
   }
 }
