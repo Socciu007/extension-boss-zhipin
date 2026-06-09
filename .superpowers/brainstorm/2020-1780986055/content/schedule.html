@@ -1,0 +1,85 @@
+<h2>Schedule + Throttling</h2>
+<p class="subtitle">Hai cơ chế: chrome.alarms (wake-up) + setTimeout nội bộ (delay giữa reply) + active window check</p>
+
+<div class="section">
+  <h3>1. Wake-up loop — chrome.alarms</h3>
+  <pre style="font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.7; background:#0f172a; color:#e2e8f0; padding:14px; border-radius:6px; overflow-x:auto;">
+// src/background/index.ts
+chrome.runtime.onInstalled.addListener(() =&gt; {
+  chrome.alarms.create('auto-reply-tick', { periodInMinutes: 1 })
+})
+
+chrome.alarms.onAlarm.addListener((alarm) =&gt; {
+  if (alarm.name === 'auto-reply-tick') {
+    loop.runOnce().catch((e) =&gt; storage.recordError(e))
+  }
+})
+</pre>
+  <p>Alarm 1 phút/lần. Mỗi tick, <code>runOnce()</code> kiểm tra <i>điều kiện active</i>; nếu pass, mới lặp <i>một</i> reply rồi tự gọi lại qua setTimeout.</p>
+</div>
+
+<div class="section">
+  <h3>2. Active window check</h3>
+  <pre style="font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.7; background:#0f172a; color:#e2e8f0; padding:14px; border-radius:6px; overflow-x:auto;">
+// src/background/scheduler.ts
+export function isInActiveWindow(config: AppConfig, now = new Date()): boolean {
+  const day = now.getDay()
+  const minutes = now.getHours() * 60 + now.getMinutes()
+  return config.scheduleWindows.some(w =&gt; {
+    if (!w.days.includes(day)) return false
+    const [sh, sm] = w.start.split(':').map(Number)
+    const [eh, em] = w.end.split(':').map(Number)
+    return minutes &gt;= sh*60+sm &amp;&amp; minutes &lt; eh*60+em
+  })
+}
+</pre>
+  <p>Trả về <code>true</code> nếu <i>bất kỳ</i> window nào match. Manual ON/OFF trong popup <code>enabled=false</code> vẫn chặn, dù đang trong active window.</p>
+</div>
+
+<div class="section">
+  <h3>3. Throttle jitter giữa các reply</h3>
+  <pre style="font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.7; background:#0f172a; color:#e2e8f0; padding:14px; border-radius:6px; overflow-x:auto;">
+// src/background/loop.ts (rút gọn)
+async function tick(): Promise&lt;void&gt; {
+  const { config, stats, enabled } = await storage.getAll()
+  if (!enabled) return
+  if (stats.date !== today()) await storage.resetDailyStats()
+  if (stats.sent &gt;= config.dailyLimit) return
+  if (!scheduler.isInActiveWindow(config)) return
+
+  const tabId = await findZhipinTab()
+  if (!tabId) return                                   // chưa mở zhipin
+
+  const conv = await pickOneUnreplied(tabId)
+  if (!conv) return                                    // inbox rỗng
+
+  const reply = await gemini.generateReply(config, conv)
+  await sendReply(tabId, conv.id, reply)
+
+  await storage.markReplied(conv.id)
+  await storage.bumpSent()
+
+  // jitter 2-5s
+  const wait = randomBetween(config.throttleMinMs, config.throttleMaxMs)
+  setTimeout(tick, wait)
+}
+</pre>
+</div>
+
+<div class="section">
+  <h3>4. MV3 Service Worker keep-alive</h3>
+  <p>Vấn đề: SW bị Chrome kill sau ~30s idle. <code>setTimeout</code> dài có thể bị nuốt.</p>
+  <p><b>Giải pháp</b>: mỗi vòng tick đều trả lời SW bằng cách gọi lại <code>chrome.alarms.create('auto-reply-tick', { delayInMinutes: 0.05 })</code> (≈3s) khi cần <i>vòng tiếp theo trong tương lai gần</i>. SW chỉ thật sự idle khi thực sự không có việc (không trong active window, hết quota, không có tab zhipin). Khi vào lại active window, alarm 1 phút sẽ đánh thức SW.</p>
+  <p>Trade-off: SW "ngủ" sâu → tiết kiệm pin; nhưng lúc thoát active window → tự tắt. Cần popup re-enable thì alarm 1 phút là đủ.</p>
+</div>
+
+<div class="section">
+  <h3>5. Race conditions</h3>
+  <ul>
+    <li>Alarm fires đồng thời nhiều lần do SW wake up trễ: dùng <code>isRunning</code> flag trong storage để chặn tick mới khi tick cũ chưa xong.</li>
+    <li>User đổi config giữa chừng: <code>storage.getAll()</code> đọc mỗi tick → luôn dùng config mới nhất.</li>
+    <li>Tab zhipin bị đóng giữa lúc đang reply: try/catch quanh mọi <code>chrome.tabs.sendMessage</code>; lỗi → <code>storage.recordError()</code> và tiếp tục tick kế tiếp.</li>
+  </ul>
+</div>
+
+<p>Nếu ổn, tôi sang phần <b>DOM scraping trên zhipin.com</b>.</p>

@@ -1,7 +1,5 @@
 import "./App.css"
 import ButtonComponent from "@/components/ButtonComponent"
-import { showToast } from "./scripts"
-import { useState } from "react"
 
 export default function App() {
   return (
@@ -14,7 +12,7 @@ export default function App() {
         BOSS ZHIPIN
       </div>
       <div className="flex gap-2 justify-center">
-        {/* <ButtonComponent/> */}
+        <ButtonComponent onClick={() => {}} text="Auto Chat" />
       </div>
     </div>
   );

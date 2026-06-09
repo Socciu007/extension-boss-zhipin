@@ -1,0 +1,90 @@
+<h2>Error Handling & Safety</h2>
+<p class="subtitle">5 lớp phòng vệ + cách user biết khi có sự cố</p>
+
+<div class="section">
+  <h3>1. Lỗi từng tầng</h3>
+  <table style="width:100%; border-collapse: collapse; font-size: 13px;">
+    <thead>
+      <tr style="background:#f1f5f9; text-align:left;">
+        <th style="padding:6px 10px;">Tầng</th>
+        <th style="padding:6px 10px;">Lỗi có thể xảy ra</th>
+        <th style="padding:6px 10px;">Xử lý</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:6px 10px;"><b>DOM scraping</b></td>
+        <td style="padding:6px 10px;">Selector không match (BOSS đổi build), timeout</td>
+        <td style="padding:6px 10px;">Trả empty array → loop thấy không có conv → skip tick</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;"><b>Open conv / read last msg</b></td>
+        <td style="padding:6px 10px;">Click không có tác dụng, pane không render</td>
+        <td style="padding:6px 10px;">waitFor throws → recordError, skip conv này, thử conv khác tick sau</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;"><b>Gemini API</b></td>
+        <td style="padding:6px 10px;">HTTP 4xx/5xx, safety filter, rate limit, network</td>
+        <td style="padding:6px 10px;">throw → recordError, KHÔNG markReplied. Tick sau thử lại (cùng conv)</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;"><b>typeAndSend</b></td>
+        <td style="padding:6px 10px;">Composer không tồn tại, 3 strategies đều fail, send button disabled</td>
+        <td style="padding:6px 10px;">throw → recordError, KHÔNG markReplied. Tick sau retry</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;"><b>Service worker</b></td>
+        <td style="padding:6px 10px;">Chrome kill SW giữa loop, alarm bị miss</td>
+        <td style="padding:6px 10px;">try/finally + releaseRunLock; alarm 1 phút retry</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <h3>2. Retry policy</h3>
+  <ul>
+    <li><b>Cùng conversation</b>: nếu Gemini/send fail → KHÔNG markReplied → tick sau retry (giúp phục hồi khi DOM chưa render kịp).</li>
+    <li><b>Per-error backoff</b>: 3 lần lỗi liên tiếp cho cùng error message → tạm dừng loop 10 phút (record trong storage), tránh spam API.</li>
+    <li><b>Daily limit</b>: đã enforce trong <code>runOnce</code>. Vượt limit → return sớm.</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>3. Race-guard</h3>
+  <p>Flag <code>isRunning</code> trong storage. Mỗi <code>runOnce</code> thử <code>tryAcquireRunLock</code>; nếu đã có tick đang chạy thì skip. <code>finally</code> luôn <code>releaseRunLock</code>. Đây là cách giải quyết Chrome fire alarm 2 lần liên tiếp khi SW wake up trễ.</p>
+</div>
+
+<div class="section">
+  <h3>4. Safety đối với BOSS (anti-ban)</h3>
+  <ul>
+    <li>Throttle 2-5s giữa các reply (cấu hình được).</li>
+    <li>Daily limit 200 (cấu hình được).</li>
+    <li>Schedule window — chỉ chạy giờ hành chính.</li>
+    <li>Không bao giờ gửi nếu Gemini trả rỗng (dùng FALLBACK_REPLY thay thế).</li>
+    <li>Không retry nếu cùng error message xuất hiện 3 lần liên tiếp trong 10 phút → "circuit breaker" tạm dừng.</li>
+  </ul>
+  <p><b>Lưu ý quan trọng</b>: BOSS có thể vẫn flag tài khoản dù có throttle, đặc biệt nếu nội dung reply bị đánh dấu là template. Rủi ro do user chấp nhận.</p>
+</div>
+
+<div class="section">
+  <h3>5. Hiển thị lỗi cho user</h3>
+  <ul>
+    <li>Popup counter hiện <code>errors: N</code> + <code>lastErrorMsg</code> ngắn gọn (cắt ở 200 ký tự).</li>
+    <li>Mỗi khi bumpSent thành công → notification "Đã trả lời {candidateName}".</li>
+    <li>Mỗi khi recordError → notification "Lỗi: {msg ngắn}" (màu đỏ).</li>
+    <li><b>Không</b> hiện toast cho mỗi tick thành công im lặng (tránh spam) — chỉ toast khi gửi thật / lỗi thật.</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>6. Không thuộc phạm vi MVP (YAGNI)</h3>
+  <ul>
+    <li>Không có undo cho reply đã gửi.</li>
+    <li>Không có template theo JD cụ thể.</li>
+    <li>Không có blacklist ứng viên.</li>
+    <li>Không có retry tự động khi Gemini trả câu sai ngữ cảnh (user phát hiện và sửa tay).</li>
+  </ul>
+</div>
+
+<p>Nếu phần này ổn, tôi sẽ gộp tất cả thành <b>design doc</b> viết vào <code>docs/superpowers/specs/2026-06-09-boss-auto-reply-design.md</code>.</p>

@@ -1,0 +1,61 @@
+<h2>State / Storage Schema</h2>
+<p class="subtitle">Một store duy nhất: <code>chrome.storage.local</code> — không sync, không cần mã hoá cho khoá nội bộ</p>
+
+<div class="section">
+  <h3>Các key trong <code>chrome.storage.local</code></h3>
+  <pre style="font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.6; background:#0f172a; color:#e2e8f0; padding:14px; border-radius:6px; overflow-x:auto;">
+// === src/shared/types.ts ===
+
+type AppConfig = {
+  geminiApiKey: string         // user nhập trong popup, KHÔNG log
+  model: 'gemini-2.0-flash'    // default; có thể đổi
+  throttleMinMs: number        // default 2000
+  throttleMaxMs: number        // default 5000
+  dailyLimit: number           // default 200
+  scheduleWindows: Array&lt;{     // mảng cửa sổ thời gian
+    days: number[]              // 0=CN..6=T7 (giống JS Date.getDay())
+    start: string               // "09:00"
+    end: string                 // "12:00"
+  }&gt;
+  systemPrompt: string         // hardcode, không expose UI
+}
+
+type Conversation = {
+  id: string                    // hash từ DOM (uid, hoặc URL fragment)
+  candidateName: string         // chỉ để log
+  lastSnippet: string           // 80 ký tự cuối của candidate — debug
+  lastRepliedAt: number         // ms epoch; 0 nếu chưa
+}
+
+type DailyStats = {
+  date: string                  // "YYYY-MM-DD" local
+  sent: number
+  errors: number
+  lastErrorMsg: string          // rỗng nếu OK
+}
+
+type Persisted = {
+  config: AppConfig
+  conversations: Record&lt;string, Conversation&gt;   // dedupe
+  stats: DailyStats
+  enabled: boolean              // ON/OFF global
+}
+</pre>
+</div>
+
+<div class="section">
+  <h3>Quy tắc reset & prune</h3>
+  <ul>
+    <li><b>Daily counter</b>: reset khi <code>new Date().toISOString().slice(0,10)</code> khác <code>stats.date</code>. Có thể thực hiện lazy ở đầu mỗi vòng <code>runOnce()</code>.</li>
+    <li><b>Replied set</b>: giữ tối đa 2000 ID gần nhất (LRU). Tránh storage phình vô hạn.</li>
+    <li><b>API key</b>: chỉ đọc trong service worker. Không log. Không gửi qua message tới content script. Nếu popup cần validate → SW trả về <code>{ ok: true }</code>, không trả key.</li>
+    <li><b>enabled=false</b>: loop vẫn chạy (alarm vẫn fire) nhưng <code>runOnce()</code> return ngay. Không tốn API quota.</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>Migration path (nếu schema đổi)</h3>
+  <p>Không cần. Schema mới, key mới, không có dữ liệu cũ để tương thích. Nếu sau này cần thêm field, dùng default qua spread <code>{ ...defaults, ...persisted }</code> ở <code>storage.ts</code>.</p>
+</div>
+
+<p>Nếu schema ổn, tôi sang phần <b>Schedule + throttling</b>.</p>

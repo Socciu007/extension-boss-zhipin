@@ -1,0 +1,116 @@
+// === src/background/storage.ts ===
+// Typed wrapper around chrome.storage.local. All persistence goes through here.
+
+import {
+  DEFAULT_PERSISTED,
+  MAX_REPLIED_CACHE,
+  type Persisted,
+  type Conversation,
+  type AppConfig,
+  todayLocal,
+} from '@/shared/types'
+
+const KEY = 'auto-reply:persisted'
+
+// In-memory cache, refreshed on each get(). SW can be killed by Chrome, so
+// every read hits chrome.storage directly — simpler and survives cold start.
+export async function getAll(): Promise<Persisted> {
+  const raw = await chrome.storage.local.get(KEY)
+  const stored = raw[KEY] as Persisted | undefined
+  if (!stored) return cloneDefault()
+  // Defensive merge: ensure new fields added in newer builds still have defaults.
+  return {
+    ...cloneDefault(),
+    ...stored,
+    config: { ...cloneDefault().config, ...stored.config },
+    stats: { ...cloneDefault().stats, ...stored.stats },
+  }
+}
+
+export async function patch(partial: Partial<Persisted>): Promise<Persisted> {
+  const cur = await getAll()
+  const next: Persisted = { ...cur, ...partial }
+  await chrome.storage.local.set({ [KEY]: next })
+  return next
+}
+
+export async function updateConfig(c: Partial<AppConfig>): Promise<Persisted> {
+  const cur = await getAll()
+  return patch({ config: { ...cur.config, ...c } })
+}
+
+export async function setEnabled(enabled: boolean): Promise<void> {
+  await patch({ enabled })
+}
+
+// === Conversation (replied) cache with LRU prune ===
+
+export async function markReplied(conv: Conversation): Promise<void> {
+  const cur = await getAll()
+  const conversations = { ...cur.conversations, [conv.id]: { ...conv, lastRepliedAt: Date.now() } }
+  // LRU prune: keep the MAX_REPLIED_CACHE most recent.
+  const entries = Object.values(conversations)
+  if (entries.length > MAX_REPLIED_CACHE) {
+    entries.sort((a, b) => b.lastRepliedAt - a.lastRepliedAt)
+    const keep = new Set(entries.slice(0, MAX_REPLIED_CACHE).map((e) => e.id))
+    for (const id of Object.keys(conversations)) {
+      if (!keep.has(id)) delete conversations[id]
+    }
+  }
+  await patch({ conversations })
+}
+
+export async function hasReplied(convId: string): Promise<boolean> {
+  const cur = await getAll()
+  return Boolean(cur.conversations[convId]?.lastRepliedAt)
+}
+
+export async function clearReplied(): Promise<void> {
+  await patch({ conversations: {} })
+}
+
+// === Daily stats ===
+
+export async function bumpSent(): Promise<void> {
+  const cur = await getAll()
+  const stats = ensureFreshStats(cur.stats)
+  await patch({ stats: { ...stats, sent: stats.sent + 1, lastErrorMsg: '' } })
+}
+
+export async function recordError(msg: string): Promise<void> {
+  const cur = await getAll()
+  const stats = ensureFreshStats(cur.stats)
+  await patch({ stats: { ...stats, errors: stats.errors + 1, lastErrorMsg: msg.slice(0, 200) } })
+}
+
+export async function resetDailyStatsIfStale(): Promise<Persisted> {
+  const cur = await getAll()
+  const stats = ensureFreshStats(cur.stats)
+  if (stats !== cur.stats) return patch({ stats })
+  return cur
+}
+
+function ensureFreshStats(s: Persisted['stats']): Persisted['stats'] {
+  const today = todayLocal()
+  if (s.date === today) return s
+  return { date: today, sent: 0, errors: 0, lastErrorMsg: '' }
+}
+
+// === Race-guard flag ===
+
+export async function tryAcquireRunLock(): Promise<boolean> {
+  const cur = await getAll()
+  if (cur.isRunning) return false
+  await patch({ isRunning: true })
+  return true
+}
+
+export async function releaseRunLock(): Promise<void> {
+  await patch({ isRunning: false })
+}
+
+// === internals ===
+
+function cloneDefault(): Persisted {
+  return JSON.parse(JSON.stringify(DEFAULT_PERSISTED))
+}

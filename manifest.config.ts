@@ -21,12 +21,25 @@ export default defineManifest({
     'storage',
     'tabs',
     'cookies',
+    'alarms',
   ],
-  host_permissions: ['*://*.eptrade.cn/*'],
-  content_scripts: [{
-    js: ['src/content/features/index.ts'],
-    matches: ['https://*/*'],
-  }],
+  // Content script only needs to run on the BOSS chat page. API calls
+  // (Gemini) are made from the service worker, so no extra host perms there.
+  host_permissions: [
+    'https://generativelanguage.googleapis.com/*',
+    'https://*.zhipin.com/*',
+  ],
+  background: {
+    service_worker: 'src/background/index.ts',
+    type: 'module',
+  },
+  content_scripts: [
+    {
+      js: ['src/content/features/auto-reply/index.ts'],
+      matches: ['https://*.zhipin.com/web/chat/*'],
+      run_at: 'document_idle',
+    },
+  ],
   side_panel: {
     default_path: 'src/sidepanel/index.html',
   },

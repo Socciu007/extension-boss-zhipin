@@ -1,0 +1,95 @@
+<h2>DOM Scraping trên zhipin.com</h2>
+<p class="subtitle">Chiến lược selector bền vững + escape hatch khi BOSS đổi markup</p>
+
+<div class="section">
+  <h3>1. URL & điều kiện vào</h3>
+  <pre style="font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.7; background:#0f172a; color:#e2e8f0; padding:14px; border-radius:6px; overflow-x:auto;">
+// content script chỉ chạy khi URL khớp manifest matches:
+//   https://www.zhipin.com/web/geek/chat
+
+// Ngay khi vào, content script:
+window.addEventListener('load', () =&gt; {
+  if (!location.pathname.startsWith('/web/geek/chat')) return
+  scrape.bootstrap()
+  act.bootstrap()
+})
+</pre>
+</div>
+
+<div class="section">
+  <h3>2. Selector strategy — "stable first, fallback second"</h3>
+  <p>BOSS là SPA React. Class CSS thường có hash (vd <code>.chat-item-7f3a9c</code>) → đổi theo build. Vì vậy:</p>
+  <ul>
+    <li><b>Ưu tiên #1</b>: <code>data-attribute</code> (vd <code>[data-uid]</code>, <code>[data-conv-id]</code>) — thường ổn định.</li>
+    <li><b>Ưu tiên #2</b>: cấu trúc DOM + vị trí (vd <code>aside ul &gt; li</code> thay vì <code>.listItem__abc123</code>).</li>
+    <li><b>Ưu tiên #3</b>: text content một phần (vd "chưa đọc" / "未读").</li>
+    <li><b>Ưu tiên #4 (cuối cùng)</b>: class hash, kèm comment <code>// FRAGILE</code> trong code.</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>3. Một số selector dự kiến (CẦN VERIFY khi test)</h3>
+  <pre style="font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.7; background:#0f172a; color:#e2e8f0; padding:14px; border-radius:6px; overflow-x:auto;">
+// src/content/features/auto-reply/dom.ts — tập trung vào một file
+// để dễ bảo trì khi BOSS đổi markup
+
+export const SEL = {
+  // chat list (sidebar trái)
+  chatListRoot:    'aside &gt; ul, [data-component="chat-list"]',
+  chatListItem:    '[data-uid], aside ul &gt; li',   // mỗi conversation
+  unreadBadge:     '[class*="badge"], [class*="unread"]',
+  candidateName:   '[class*="name"]',
+
+  // right panel: hội thoại đang mở
+  messagePane:     '[class*="message-list"], [class*="chat-body"]',
+  lastBubble:      '[class*="message-item"]:last-of-type, [class*="message-item"]:nth-last-child(1)',
+  lastBubbleText:  '[class*="text"], [class*="content"]',
+
+  // input + send
+  input:           '[contenteditable="true"]',
+  sendButton:      '[class*="send"], button[type="button"]',
+}
+</pre>
+  <p class="subtitle">⚠️ Selector trên là <b>dự đoán</b>. Khi implement, tôi sẽ mở zhipin.com/web/geek/chat thật, inspect DOM, và cập nhật cho khớp. Sẽ có 1 chế độ "selector test" trong popup để verify từng selector trả về đúng node.</p>
+</div>
+
+<div class="section">
+  <h3>4. Quy trình scrape 1 conversation</h3>
+  <ol>
+    <li><code>findUnread()</code>: query <code>SEL.chatListItem</code> trong <code>SEL.chatListRoot</code> → lọc các phần tử có <code>unreadBadge</code> descendent. Trả về <code>{ uid, name, snippet }[]</code>.</li>
+    <li><code>openConv(uid)</code>: tìm <code>[data-uid="&lt;uid&gt;"]</code> → <code>click()</code> → <code>wait.waitFor(SEL.lastBubble, { timeout: 5000 })</code>.</li>
+    <li><code>readLastMessage()</code>: lấy text của <code>lastBubble &gt; lastBubbleText</code>. Nếu rỗng / là "Tin nhắn hệ thống" → bỏ qua, coi như không có candidate message.</li>
+    <li>Trả về string cho SW.</li>
+  </ol>
+</div>
+
+<div class="section">
+  <h3>5. typeAndSend — gõ & gửi</h3>
+  <pre style="font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.7; background:#0f172a; color:#e2e8f0; padding:14px; border-radius:6px; overflow-x:auto;">
+// src/content/features/auto-reply/act.ts
+export async function typeAndSend(text: string): Promise&lt;void&gt; {
+  const input = await wait.waitFor(SEL.input, { timeout: 5000 })
+  input.focus()
+
+  // contenteditable không nhận value=. Cần dispatch input event.
+  // Cách phổ biến:
+  input.textContent = ''                        // clear
+  input.append(document.createTextNode(text))   // append text
+  input.dispatchEvent(new InputEvent('input', { bubbles: true }))
+
+  // chờ React render
+  await sleep(200)
+
+  const send = await wait.waitFor(SEL.sendButton, { timeout: 3000 })
+  send.click()
+}
+</pre>
+  <p class="subtitle">⚠️ BOSS có thể wrap input bằng component React custom. Nếu <code>append(textNode)</code> không làm React rerender → thử <code>paste</code> event với <code>ClipboardEvent</code> hoặc gõ từng ký tự với <code>KeyboardEvent('keydown', { key })</code>. Có test mode trong popup để thử 3 cách.</p>
+</div>
+
+<div class="section">
+  <h3>6. "Selector test" mode trong popup</h3>
+  <p>Popup có nút <b>Test selectors</b> (chỉ bật khi <code>enabled=false</code>). Click → mở tab zhipin.com chat → chạy từng selector, highlight node match được (border đỏ), log kết quả vào popup console. Giúp user xác minh selector còn dùng được trước khi bật auto-reply thật.</p>
+</div>
+
+<p>Nếu chiến lược scraping ổn, tôi sang phần cuối: <b>Error handling & safety</b>.</p>

@@ -1,0 +1,83 @@
+<h2>Components & Data Flow</h2>
+<p class="subtitle">File mới được thêm (toàn bộ) và cách chúng liên kết</p>
+
+<div class="section">
+  <h3>1. Service Worker (background) — "bộ não"</h3>
+  <pre style="font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.6; background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #e2e8f0;">
+src/background/
+  index.ts          ← đăng ký chrome.alarms, message router, lifecycle
+  loop.ts           ← runOnce() — orchestrate một vòng lập
+  gemini.ts         ← callGenerative() — gọi Gemini REST
+  scheduler.ts      ← isInActiveWindow(), nextWakeUp()
+  storage.ts        ← typed wrapper quanh chrome.storage.local
+  config.ts         ← constants (URL, models, throttle defaults)
+  </pre>
+</div>
+
+<div class="section">
+  <h3>2. Content Script (mới, riêng cho auto-reply)</h3>
+  <pre style="font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.6; background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #e2e8f0;">
+src/content/features/auto-reply/
+  index.ts          ← đăng ký onMessage từ SW, gửi kết quả về
+  dom.ts            ← SELECTORS (chat list row, message bubble, input, send)
+  scrape.ts         ← findUnread(), readLastMessage(convId), openConv(convId)
+  act.ts            ← typeAndSend(text) — gõ vào input rồi click send
+  wait.ts           ← waitForSelector, waitForText, retry helper
+  </pre>
+  <p class="subtitle">Đăng ký qua <code>manifest.config.ts</code> với <code>matches: ['https://www.zhipin.com/web/geek/chat*']</code></p>
+</div>
+
+<div class="section">
+  <h3>3. Popup (mở rộng popup hiện có)</h3>
+  <pre style="font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.6; background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #e2e8f0;">
+src/popup/
+  App.tsx           ← +toggle ON/OFF, +counter, +trạng thái scheduler
+  ConfigForm.tsx    ← (mới) — ô nhập API key, chỉnh throttle/limit, lịch
+  </pre>
+</div>
+
+<div class="section">
+  <h3>4. Shared (mới)</h3>
+  <pre style="font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.6; background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #e2e8f0;">
+src/shared/
+  messages.ts       ← type Msg =
+                    │   { type: 'SCRAPE_UNREAD' }
+                    │   { type: 'REPLY', convId, text }
+                    │   { type: 'TOGGLE', on: bool }
+                    │   { type: 'GET_STATE' }
+  types.ts          ← Conversation, DailyStats, AppConfig
+  prompt.ts         ← HARDCODED_SYSTEM_PROMPT (chuỗi tiếng Việt/Anh)
+  </pre>
+</div>
+
+<div class="section">
+  <h3>5. Manifest thay đổi</h3>
+  <pre style="font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.6; background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #e2e8f0;">
+manifest.config.ts
+  + host_permissions: thêm 'https://www.zhipin.com/*'
+  + content_scripts: matches đổi từ 'https://*/*' sang
+                     'https://www.zhipin.com/web/geek/chat*'
+                     (vẫn giữ content/features/index.ts cho oocl.com stub
+                      bằng cách tách thành 1 entry khác)
+  + permissions: thêm 'alarms'
+  </pre>
+</div>
+
+<div class="section">
+  <h3>Data flow (một reply)</h3>
+  <ol>
+    <li><b>SW</b>: alarm fires → <code>loop.runOnce()</code></li>
+    <li>SW checks config: enabled? in schedule window? daily &lt; limit? → nếu fail, return.</li>
+    <li>SW gọi <code>chrome.tabs.query({ url: 'https://www.zhipin.com/web/geek/chat*' })</code> → lấy tabId.</li>
+    <li>SW gửi <code>{ type: 'SCRAPE_UNREAD' }</code> → content script.</li>
+    <li>Content script: <code>scrape.findUnread()</code> → trả về <code>Conversation[]</code> (chưa lọc dedupe).</li>
+    <li>SW lọc qua <code>repliedSet</code> trong storage → lấy conv đầu tiên chưa reply.</li>
+    <li>SW: <code>scrape.openConv(convId)</code> → đợi DOM render → <code>readLastMessage()</code>.</li>
+    <li>SW: <code>gemini.generateReply(systemPrompt, history)</code> → reply text.</li>
+    <li>SW: <code>act.typeAndSend(text)</code> → content script gõ + click send.</li>
+    <li>SW: cập nhật <code>repliedSet</code>, <code>dailyStats.sent++</code>, <code>lastReplyAt</code>.</li>
+    <li>SW: <code>setTimeout(loop.runOnce, jitter(2000, 5000))</code> cho cuộc tiếp theo.</li>
+  </ol>
+</div>
+
+<p>Nếu tách file như trên ổn, tôi sang phần <b>State / storage schema</b>.</p>

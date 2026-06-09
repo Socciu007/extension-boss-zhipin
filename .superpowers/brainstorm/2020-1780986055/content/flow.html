@@ -1,0 +1,54 @@
+<h2>Auto-Reply Boss Zhipin — luồng tổng quan</h2>
+<p class="subtitle">Một vòng lặp: tìm inbox chưa rep → scrape → Gemini → gõ & gửi → đếm quota</p>
+
+<div class="mockup">
+  <div class="mockup-header">Sequence: 1 cuộc hội thoại được auto-reply</div>
+  <div class="mockup-body">
+<pre style="font-family: ui-monospace, monospace; font-size: 13px; line-height: 1.7; background:#0f172a; color:#e2e8f0; padding: 16px; border-radius: 8px; overflow-x:auto;">
+
+  ┌────────────┐         ┌─────────────────┐         ┌──────────────┐
+  │ zhipin.com │         │  Service Worker │         │ Gemini API   │
+  │  chat page │         │  (background)   │         │ (Google AI)  │
+  └─────┬──────┘         └────────┬────────┘         └──────┬───────┘
+        │                         │                          │
+   1.   │  scrape chat list       │                          │
+        │  (find unread conv)     │                          │
+        │ ─────────────────────► │                          │
+        │                         │                          │
+   2.   │                         │  Gemini generate         │
+        │                         │  (system prompt +        │
+        │                         │   last candidate msg)    │
+        │                         │ ───────────────────────► │
+        │                         │                          │
+   3.   │                         │ ◄───── reply text ──────│
+        │                         │                          │
+   4.   │  open conversation      │                          │
+        │ ◄────────────────────── │                          │
+        │  scrape last candidate  │                          │
+        │  message (for context)  │                          │
+        │ ─────────────────────► │                          │
+        │                         │                          │
+   5.   │  type into input        │                          │
+        │ ◄────────────────────── │                          │
+        │  click "send"           │                          │
+        │ ────── confirm ──────► │                          │
+        │                         │                          │
+   6.   │                         │  +1 to daily counter     │
+        │                         │  mark conv as replied    │
+        │                         │  wait 2-5s               │
+        │                         │                          │
+
+</pre>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Phạm vi MỘT vòng lặp</h3>
+  <ul>
+    <li><b>Bước 1-2:</b> service worker chỉ đạo. Content script chỉ thực thi khi được yêu cầu.</li>
+    <li><b>Bước 3-4:</b> LLM chỉ được gọi SAU khi đã scrape được nội dung — tránh gọi Gemini vô ích.</li>
+    <li><b>Bước 5-6:</b> Gõ & gửi trên UI thật, không gọi Boss API nội bộ → dễ break khi BOSS đổi DOM, nhưng không vi phạm chính sách API.</li>
+  </ul>
+</div>
+
+<p>Nếu thấy flow hợp lý, tôi sang phần <b>Components & data flow</b>.</p>
