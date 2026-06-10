@@ -1,0 +1,93 @@
+<h2>Auto-chat flow — Phần 3/4</h2>
+<p class="subtitle">Loop tự nối tiếp bằng setTimeout, không phụ thuộc alarm. Alarm 1 phút chỉ là safety net.</p>
+
+<div style="display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap;">
+
+  <div class="mockup" style="flex: 1; min-width: 320px;">
+    <div class="mockup-header">Sequence: User click "Bật" → chạy loop</div>
+    <div class="mockup-body" style="padding: 12px; font-family: monospace; font-size: 11px; background: #0f172a; color: #cbd5e1;">
+<pre style="margin:0; line-height: 1.6;">
+[User click "Bật" trên popup]
+  ↓
+Popup → SW:  TOGGLE_ENABLED { enabled: true }
+  ↓
+SW: storage.setEnabled(true) → isRunning=false, enabled=true
+SW: runOnce()  (chạy NGAY, không đợi)
+  ↓
+runOnce:
+  ├─ tryAcquireRunLock() → skip nếu tick trước còn chạy
+  ├─ check enabled / apiKey / dailyLimit / schedule / zhipin tab
+  ├─ SCRAPE_UNREAD → OPEN_CONV → READ_LAST_MESSAGE
+  ├─ gemini.generateReply()
+  ├─ SEND_REPLY → markReplied + bumpSent
+  └─ setTimeout(jitter(2-5s)) → runOnce()  (tự nối)
+  ↓
+Sau khi click "Bật" ~3-7s, reply đầu tiên được gửi.
+
+Loop tiếp tục mỗi 2-5s khi enabled=true, không phụ thuộc popup.
+</pre>
+    </div>
+  </div>
+
+  <div class="mockup" style="flex: 1; min-width: 320px;">
+    <div class="mockup-header">Sequence: User click "Tắt" → dừng loop</div>
+    <div class="mockup-body" style="padding: 12px; font-family: monospace; font-size: 11px; background: #0f172a; color: #cbd5e1;">
+<pre style="margin:0; line-height: 1.6;">
+[User click "Tắt" trên popup]
+  ↓
+Popup → SW:  TOGGLE_ENABLED { enabled: false }
+  ↓
+SW: storage.setEnabled(false)
+  ↓
+runOnce hiện tại đang chạy:
+  ├─ hoàn thành tick hiện tại
+  ├─ KHÔNG gọi setTimeout(runOnce) nữa
+  └─ releaseRunLock()
+  ↓
+Loop dừng. Popup polling thấy enabled=false.
+
+Nếu tick hiện tại fail → releaseRunLock() vẫn chạy
+trong finally, nhưng không tự gọi runOnce lần nữa.
+</pre>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top: 16px; padding: 12px; background: #1e293b; border-radius: 6px;">
+<h3 style="margin-top: 0;">Điểm khác biệt so với spec cũ (alarm-driven)</h3>
+<table style="width:100%; font-size: 12px; color: #cbd5e1; border-collapse: collapse;">
+<tr style="border-bottom: 1px solid #334155;">
+  <th style="text-align:left; padding: 6px;">Khía cạnh</th>
+  <th style="text-align:left; padding: 6px;">Spec cũ (alarm)</th>
+  <th style="text-align:left; padding: 6px;">Bản mới (button-trigger)</th>
+</tr>
+<tr>
+  <td style="padding: 6px;"><b>Trigger chính</b></td>
+  <td style="padding: 6px;">chrome.alarms mỗi 60s</td>
+  <td style="padding: 6px;">setTimeout(jitter) tự nối</td>
+</tr>
+<tr>
+  <td style="padding: 6px;"><b>Khi nào tick đầu chạy?</b></td>
+  <td style="padding: 6px;">Sau khi tạo alarm (chờ tới 60s)</td>
+  <td style="padding: 6px;">Ngay sau khi click "Bật"</td>
+</tr>
+<tr>
+  <td style="padding: 6px;"><b>Alarm còn cần không?</b></td>
+  <td style="padding: 6px;">Có, primary</td>
+  <td style="padding: 6px;">Có, chỉ làm safety net (Chrome kill SW)</td>
+</tr>
+<tr>
+  <td style="padding: 6px;"><b>Đóng popup</b></td>
+  <td style="padding: 6px;">Không ảnh hưởng</td>
+  <td style="padding: 6px;">Không ảnh hưởng (giống nhau)</td>
+</tr>
+<tr>
+  <td style="padding: 6px;"><b>Throttled lúc nào?</b></td>
+  <td style="padding: 6px;">Giữa 2 alarm tick</td>
+  <td style="padding: 6px;">Giữa 2 runOnce() trong setTimeout</td>
+</tr>
+</table>
+</div>
+
+<p class="subtitle" style="margin-top: 16px;">OK thì tôi qua Phần 4 (file changes).</p>

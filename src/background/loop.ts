@@ -4,7 +4,7 @@
 import * as storage from './storage'
 import * as scheduler from './scheduler'
 import * as gemini from './gemini'
-import { SYSTEM_PROMPT } from '@/content/features/auto-reply/prompt'
+import { SYSTEM_PROMPT } from '@/shared/prompt'
 import type { Conversation } from '@/shared/types'
 import type { SwToContent, ContentToSw } from '@/shared/messages'
 
@@ -41,10 +41,6 @@ export async function runOnce(): Promise<void> {
   try {
     const cur = await storage.getAll()
     if (!cur.enabled) return
-    if (!cur.config.geminiApiKey) {
-      await storage.recordError('Gemini API key chưa được cấu hình')
-      return
-    }
     await storage.resetDailyStatsIfStale()
     const stats = (await storage.getAll()).stats
     if (stats.sent >= cur.config.dailyLimit) return

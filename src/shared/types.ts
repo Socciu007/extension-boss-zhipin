@@ -7,7 +7,6 @@ type ScheduleWindow = {
 }
 
 type AppConfig = {
-  geminiApiKey: string         // user nhập trong popup, KHÔNG log
   model: 'gemini-2.0-flash' | 'gemini-2.5-flash'
   throttleMinMs: number        // default 2000
   throttleMaxMs: number        // default 5000
@@ -45,7 +44,6 @@ const DEFAULT_SCHEDULE: ScheduleWindow[] = [
 ]
 
 const DEFAULT_CONFIG: AppConfig = {
-  geminiApiKey: '',
   model: 'gemini-2.0-flash',
   throttleMinMs: 2000,
   throttleMaxMs: 5000,

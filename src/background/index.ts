@@ -71,10 +71,16 @@ async function handlePopupMessage(msg: PopupToSw): Promise<SwToPopup> {
     }
     case 'TOGGLE_ENABLED':
       await storage.setEnabled(msg.enabled)
-      if (msg.enabled) loop.kickLoopSoon()
+      if (msg.enabled) {
+        // Primary trigger: fire runOnce immediately so the first reply
+        // goes out within seconds, not 60s (alarm minimum).
+        loop.kickLoopSoon()
+        loop.runOnce().catch((e) => storage.recordError(String(e)))
+      }
       return stateNow()
     case 'UPDATE_CONFIG':
-      await storage.updateConfig(msg.config)
+      // No-op: API key is hardcoded in @/shared/prompt; config is not
+      // user-editable in v1. Kept in the union for backward compat.
       return stateNow()
     case 'CLEAR_REPLIED':
       await storage.clearReplied()

@@ -5,7 +5,6 @@ import { defineConfig } from 'vite'
 import zip from 'vite-plugin-zip-pack'
 import manifest from './manifest.config.js'
 import { name, version } from './package.json'
-import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   resolve: {
@@ -13,11 +12,12 @@ export default defineConfig({
       '@': `${path.resolve(__dirname, 'src')}`,
     },
   },
+  // PostCSS picks up postcss.config.js automatically — no Vite plugin
+  // needed for Tailwind v3.
   plugins: [
     react(),
     crx({ manifest }),
     zip({ outDir: 'release', outFileName: `${name}-${version}.zip` }),
-    tailwindcss(),
   ],
   server: {
     cors: {
