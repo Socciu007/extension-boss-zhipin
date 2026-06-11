@@ -2,7 +2,7 @@
 // One tick of the auto-reply loop. Called by the alarm handler in index.ts.
 
 import * as storage from './storage'
-import * as scheduler from './scheduler'
+import { jitter } from './scheduler'
 import * as gemini from './gemini'
 import { SYSTEM_PROMPT } from '@/shared/prompt'
 import type { Conversation } from '@/shared/types'
@@ -10,7 +10,7 @@ import type { SwToContent, ContentToSw } from '@/shared/messages'
 
 // Find a Chrome tab that is on the BOSS chat page. Returns null if none open.
 async function findZhipinTab(): Promise<number | null> {
-  const tabs = await chrome.tabs.query({ url: '*://*zhipin.com/web/chat*' })
+  const tabs = await chrome.tabs.query({ url: 'https://www.zhipin.com/web/chat*' })
   if (tabs.length === 0) return null
   return tabs[0].id ?? null
 }
@@ -44,12 +44,13 @@ export async function runOnce(): Promise<void> {
     await storage.resetDailyStatsIfStale()
     const stats = (await storage.getAll()).stats
     if (stats.sent >= cur.config.dailyLimit) return
-    if (!scheduler.isInActiveWindow(cur.config)) return
+    // (No schedule check — user clicks the button to start the loop.)
 
     const tabId = await findZhipinTab()
     if (!tabId) return
-
+    
     const conv = await pickOneUnreplied(tabId)
+    console.log('conv', conv)
     if (!conv) return
 
     // Open conversation, then read the last candidate message.
@@ -91,7 +92,7 @@ export async function runOnce(): Promise<void> {
     // Chain the next reply with human-like jitter via setTimeout. The
     // 1-minute chrome.alarms in background/index.ts is the safety net if
     // Chrome kills the SW before this fires.
-    const wait = scheduler.jitter(cur.config.throttleMinMs, cur.config.throttleMaxMs)
+    const wait = jitter(cur.config.throttleMinMs, cur.config.throttleMaxMs)
     setTimeout(() => {
       runOnce().catch(async (e: unknown) => {
         await storage.recordError((e as Error).message ?? String(e))

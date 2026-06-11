@@ -5,50 +5,49 @@
 import type { Conversation, AppConfig } from './types'
 
 type SwToContent =
-  | { type: 'PING' }
-  | { type: 'SCRAPE_UNREAD' }
-  | { type: 'OPEN_CONV'; convId: string }
-  | { type: 'READ_LAST_MESSAGE'; convId: string }
-  | { type: 'SEND_REPLY'; convId: string; text: string }
-  | { type: 'TEST_SELECTORS' }
+ | { type: 'PING' }
+ | { type: 'SCRAPE_UNREAD' }
+ | { type: 'OPEN_CONV'; convId: string }
+ | { type: 'READ_LAST_MESSAGE'; convId: string }
+ | { type: 'SEND_REPLY'; convId: string; text: string }
+ | { type: 'TEST_SELECTORS' }
 
 type ContentToSw =
-  | { type: 'PONG' }
-  | { type: 'UNREAD_LIST'; conversations: Conversation[] }
-  | { type: 'CONV_OPENED'; convId: string }
-  | { type: 'LAST_MESSAGE'; convId: string; text: string }
-  | { type: 'REPLY_SENT'; convId: string; ok: boolean; error?: string }
-  | { type: 'SELECTOR_TEST_RESULT'; results: SelectorTestResult[] }
+ | { type: 'PONG' }
+ | { type: 'UNREAD_LIST'; conversations: Conversation[] }
+ | { type: 'CONV_OPENED'; convId: string }
+ | { type: 'LAST_MESSAGE'; convId: string; text: string }
+ | { type: 'REPLY_SENT'; convId: string; ok: boolean; error?: string }
+ | { type: 'SELECTOR_TEST_RESULT'; results: SelectorTestResult[] }
 
 type SelectorTestResult = {
-  name: string
-  selector: string
-  matched: number
-  sampleText?: string
+ name: string
+ selector: string
+ matched: number
+ sampleText?: string
 }
 
 type PopupToSw =
-  | { type: 'GET_STATE' }
-  | { type: 'TOGGLE_ENABLED'; enabled: boolean }
-  | { type: 'UPDATE_CONFIG'; config: Partial<AppConfig> }
-  | { type: 'CLEAR_REPLIED' }
-  | { type: 'RUN_ONCE' }                       // debug: tick ngay
+ | { type: 'GET_STATE' }
+ | { type: 'TOGGLE_ENABLED'; enabled: boolean }
+ | { type: 'UPDATE_CONFIG'; config: Partial<AppConfig> }
+ | { type: 'CLEAR_REPLIED' }
+ | { type: 'RUN_ONCE' } // debug: tick ngay
 
 type SwToPopup = {
-  type: 'STATE'
-  enabled: boolean
-  sent: number
-  dailyLimit: number
-  errors: number
-  lastErrorMsg: string
-  inActiveWindow: boolean
-  isRunning: boolean
+ type: 'STATE'
+ enabled: boolean
+ sent: number
+ dailyLimit: number
+ errors: number
+ lastErrorMsg: string
+ isRunning: boolean
 }
 
 export type {
-  SwToContent,
-  ContentToSw,
-  PopupToSw,
-  SwToPopup,
-  SelectorTestResult,
+ SwToContent,
+ ContentToSw,
+ PopupToSw,
+ SwToPopup,
+ SelectorTestResult,
 }

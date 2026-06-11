@@ -8,138 +8,135 @@
 // when BOSS rolls a new build.
 
 export const SEL = {
-  // Chat list container in the center column.
-  chatListRoot: [
-    'ul.chat-list',
-    'ul[class*="session-list"]',
-    'ul[class*="conversation-list"]',
-    '[data-component="chat-list"] ul',
-  ],
+ chatListRoot: [
+ '.user-list',
+ '.user-container',
+ 'ul.chat-list',
+ '[role="list"]',
+ '[data-component="chat-list"] ul',
+ ],
 
-  // One row in the chat list.
-  chatListItem: [
-    'li[data-uid]',                          // most stable if BOSS sets it
-    'li[data-geek-id]',
-    'ul[class*="session-list"] > li',
-    'ul[class*="conversation-list"] > li',
-  ],
+ chatListItem: [
+ '[role="listitem"][key]',
+ '[role="listitem"]',
+ '.user-list > div > div',
+ 'li[data-uid]',
+ 'li[data-geek-id]',
+ 'ul[class*="session-list"] > li',
+ 'ul[class*="conversation-list"] > li',
+ ],
 
-  // The red unread badge on the avatar (carries the unread count text).
-  unreadBadge: [
-    '[class*="badge"]',
-    '[class*="unread"]',
-    'sup',
-    'em[class*="num"]',
-  ],
+ unreadBadge: [
+ '[class*="unread-count"]',
+ '[class*="unread"]',
+ '[class*="badge"]',
+ 'sup',
+ 'em[class*="num"]',
+ ],
 
-  // Candidate display name within a row.
-  candidateName: [
-    '[class*="name"]',
-    'span.title',
-  ],
+ candidateName: [
+ '[class*="name"]',
+ '[class*="nickname"]',
+ 'span.title',
+ ],
 
-  // Job tag next to name (e.g. "Java").
-  jobTitle: [
-    '[class*="job"]',
-    '[class*="position"]',
-    'span.label',
-  ],
+ jobTitle: [
+ '[class*="job"]',
+ '[class*="position"]',
+ '[class*="position-tag"]',
+ 'span.label',
+ ],
 
-  // Last message snippet in a row.
-  snippet: [
-    '[class*="snippet"]',
-    '[class*="preview"]',
-    'p.text',
-  ],
+ snippet: [
+ '[class*="snippet"]',
+ '[class*="preview"]',
+ '[class*="last-msg"]',
+ 'p.text',
+ ],
 
-  // "未读" tab/button that filters to unread only.
-  unreadTab: [
-    'a:has-text("未读")',
-    'li:has-text("未读")',
-    '[class*="tab"]:has-text("未读")',
-  ],
+ timestamp: [
+ '[class*="time"]',
+ '[class*="date"]',
+ 'time',
+ ],
 
-  // Right panel: messages area.
-  messagePane: [
-    '[class*="message-list"]',
-    '[class*="chat-body"]',
-    '[class*="msg-list"]',
-  ],
+ unreadTab: [
+ '.chat-message-filter',
+ 'a:has-text("未读")',
+ 'li:has-text("未读")',
+ '[class*="tab"]:has-text("未读")',
+ '[d-c]:has-text("未读")',
+ ],
 
-  // One message bubble inside the pane.
-  messageBubble: [
-    '[class*="message-item"]',
-    '[class*="msg-item"]',
-    '[class*="bubble"]',
-  ],
+ messagePane: [
+ '[class*="message-list"]',
+ '[class*="chat-body"]',
+ '[class*="msg-list"]',
+ ],
 
-  // Text body inside a bubble.
-  bubbleText: [
-    '[class*="text"]',
-    '[class*="content"]',
-    'span.text',
-  ],
+ messageBubble: [
+ '[class*="message-item"]',
+ '[class*="msg-item"]',
+ '[class*="bubble"]',
+ ],
 
-  // Composer (contenteditable input).
-  input: [
-    '[contenteditable="true"]',
-    'div[contenteditable="true"][class*="input"]',
-    'div[contenteditable="true"][class*="editor"]',
-  ],
+ bubbleText: [
+ '[class*="text"]',
+ '[class*="content"]',
+ 'span.text',
+ ],
 
-  // Send button next to the composer.
-  sendButton: [
-    'button[class*="send"]',
-    'a[class*="send"]',
-    '[class*="send-btn"]',
-    'button[type="button"][class*="btn"]',
-  ],
+ input: [
+ '[contenteditable="true"]',
+ 'div[contenteditable="true"][class*="input"]',
+ 'div[contenteditable="true"][class*="editor"]',
+ ],
+
+ sendButton: [
+ 'button[class*="send"]',
+ 'a[class*="send"]',
+ '[class*="send-btn"]',
+ 'button[type="button"][class*="btn"]',
+ ],
 } as const
 
-// Try each selector in order. Return the first match (or null).
-// Useful for elements where multiple fallbacks exist.
 export function $(selectors: readonly string[], root: ParentNode = document): Element | null {
-  for (const sel of selectors) {
-    try {
-      const el = root.querySelector(sel)
-      if (el) return el
-    } catch {
-      // pseudo-classes like :has-text are not real CSS — skip silently
-    }
-  }
-  return null
+ for (const sel of selectors) {
+ try {
+ const el = root.querySelector(sel)
+ if (el) return el
+ } catch {
+ }
+ }
+ return null
 }
 
 export function $$(selectors: readonly string[], root: ParentNode = document): Element[] {
-  for (const sel of selectors) {
-    try {
-      const out = root.querySelectorAll(sel)
-      if (out.length) return Array.from(out)
-    } catch {
-      // skip
-    }
-  }
-  return []
+ for (const sel of selectors) {
+ try {
+ const out = root.querySelectorAll(sel)
+ if (out.length) return Array.from(out)
+ } catch {
+ }
+ }
+ return []
 }
 
-// Pull an integer count from a small badge element (e.g. the red "1" next to avatar).
-// Returns 0 if no number found.
 export function readBadgeCount(badge: Element | null): number {
-  if (!badge) return 0
-  const text = (badge.textContent ?? '').trim()
-  const n = parseInt(text, 10)
-  return Number.isFinite(n) ? n : 0
+ if (!badge) return Number(0)
+ const text = (badge.textContent ?? '').trim()
+ const n = Number(text)
+ return Number.isFinite(n) ? n : Number(0)
 }
 
-// Stable id for a row, derived from data-attrs first, then DOM position hash.
-// Same DOM → same id; reset across page reloads (which is fine because
-// we re-scrape on load).
 export function rowId(row: Element, index: number): string {
-  const ds = (row as HTMLElement).dataset
-  return (
-    ds.uid ??
-    ds.geekId ??
-    ds.id ??
-    `row-${index}-${(row.textContent ?? '').slice(0, 12).replace(/\s+/g, '')}`
-  )
+ const ds = (row as HTMLElement).dataset
+ return (
+ ds.uid ??
+ ds.geekId ??
+ ds.id ??
+ ds.key ??
+ (row as HTMLElement).getAttribute('key') ??
+ `row-${index}-${(row.textContent ?? '').slice(0,12).replace(/\s+/g, '')}`
+ )
 }

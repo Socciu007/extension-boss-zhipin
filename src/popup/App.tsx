@@ -1,11 +1,12 @@
 // === src/popup/App.tsx ===
-// Layout B: title + toggle row + 2x2 status grid + error line.
+// Layout B: title + toggle row + status grid + error line.
+// The loop runs only when the user clicks the button — no time-based scheduling.
 // Polls the service worker once per second while the popup is open.
-import './index.css'
-import { useEffect, useState } from "react"
-import ButtonComponent from "@/components/ButtonComponent"
-import { showToast } from "./scripts"
-import type { PopupToSw, SwToPopup } from "@/shared/messages"
+import "./index.css";
+import { useEffect, useState } from "react";
+import ButtonComponent from "@/components/ButtonComponent";
+import { showToast } from "./scripts";
+import type { PopupToSw, SwToPopup } from "@/shared/messages";
 
 const DEFAULT_STATE: SwToPopup = {
   type: "STATE",
@@ -14,51 +15,50 @@ const DEFAULT_STATE: SwToPopup = {
   dailyLimit: 200,
   errors: 0,
   lastErrorMsg: "",
-  inActiveWindow: false,
   isRunning: false,
-}
+};
 
 export default function App() {
-  const [state, setState] = useState<SwToPopup>(DEFAULT_STATE)
-  const [toggling, setToggling] = useState(false)
+  const [state, setState] = useState<SwToPopup>(DEFAULT_STATE);
+  const [toggling, setToggling] = useState(false);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
     const fetchState = async () => {
       try {
         const r = await chrome.runtime.sendMessage({
           type: "GET_STATE",
-        } satisfies PopupToSw)
-        if (!cancelled && r && r.type === "STATE") setState(r)
+        } satisfies PopupToSw);
+        if (!cancelled && r && r.type === "STATE") setState(r);
       } catch {
         // SW may not be ready yet (cold start) — ignore and retry on next tick.
       }
-    }
-    fetchState()
-    const id = setInterval(fetchState, 1000)
+    };
+    fetchState();
+    const id = setInterval(fetchState, 1000);
     return () => {
-      cancelled = true
-      clearInterval(id)
-    }
-  }, [])
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
 
   const onToggle = async () => {
-    if (toggling) return
-    setToggling(true)
-    const next = !state.enabled
+    if (toggling) return;
+    setToggling(true);
+    const next = !state.enabled;
     try {
       const r = await chrome.runtime.sendMessage({
         type: "TOGGLE_ENABLED",
         enabled: next,
-      } satisfies PopupToSw)
-      if (r && r.type === "STATE") setState(r)
-      showToast(next ? "Đã bật auto-reply" : "Đã tắt auto-reply", "info")
+      } satisfies PopupToSw);
+      if (r && r.type === "STATE") setState(r);
+      showToast(next ? "Đã bật auto-reply" : "Đã tắt auto-reply", "info");
     } catch (e) {
-      showToast(`Lỗi: ${(e as Error).message}`, "error")
+      showToast(`Error: ${(e as Error).message}`, "error");
     } finally {
-      setToggling(false)
+      setToggling(false);
     }
-  }
+  };
 
   return (
     <div className="relative w-[280px] bg-slate-900 text-white p-3 font-sans">
@@ -71,11 +71,15 @@ export default function App() {
         BOSS ZHIPIN
       </div>
 
-      <ToggleRow enabled={state.enabled} onClick={onToggle} disabled={toggling} />
+      <ToggleRow
+        enabled={state.enabled}
+        onClick={onToggle}
+        disabled={toggling}
+      />
       <StatusGrid state={state} />
       <ErrorLine msg={state.lastErrorMsg} />
     </div>
-  )
+  );
 }
 
 function ToggleRow({
@@ -83,9 +87,9 @@ function ToggleRow({
   onClick,
   disabled,
 }: {
-  enabled: boolean
-  onClick: () => void
-  disabled: boolean
+  enabled: boolean;
+  onClick: () => void;
+  disabled: boolean;
 }) {
   return (
     <div
@@ -100,7 +104,7 @@ function ToggleRow({
             enabled ? "text-emerald-300" : "text-slate-400"
           }`}
         >
-          {enabled ? "Đang chạy" : "Đã tắt"}
+          {enabled ? "Đang chạy" : "Đã dừng"}
         </div>
       </div>
       <ButtonComponent
@@ -114,58 +118,50 @@ function ToggleRow({
         disabled={disabled}
       />
     </div>
-  )
+  );
 }
 
-// Emoji are stored as HTML numeric character references so Tailwind v4's
-// source scanner (which tokenises every string in .tsx files) never sees
-// raw 4-byte UTF-8 codepoints and crashes in String.fromCodePoint.
+// Emoji are stored as HTML numeric character references so Tailwind's source
+// scanner never sees raw4-byte UTF-8 codepoints and crashes in
+// String.fromCodePoint (a known Tailwind v4 bug, kept here for safety).
 function StatusGrid({ state }: { state: SwToPopup }) {
-  const enabled = state.enabled
+  const enabled = state.enabled;
   const cells: { icon: string; value: string; active?: boolean }[] = [
     { icon: "&#128236;", value: `${state.sent}/${state.dailyLimit}` },
     { icon: "&#9888;&#65039;", value: `${state.errors} lỗi` },
-    {
-      icon: "&#9200;",
-      value: state.inActiveWindow ? "Trong giờ" : "Ngoài giờ",
-      active: state.inActiveWindow,
-    },
     {
       icon: "&#128260;",
       value: state.isRunning ? "Đang chạy" : "Đã dừng",
       active: state.isRunning,
     },
-  ]
+    // (Schedule cell removed — loop runs only when user clicks the button.)
+  ];
   return (
     <div className="grid grid-cols-2 gap-1 text-[11px] mb-1.5">
       {cells.map((c, i) => {
         const colorClass = !enabled
           ? "text-slate-500"
           : c.active === false
-            ? "text-slate-400"
-            : c.active === true
-              ? "text-emerald-300"
-              : "text-white"
+          ? "text-slate-400"
+          : c.active === true
+          ? "text-emerald-300"
+          : "text-white";
         return (
-          <div
-            key={i}
-            className={`bg-slate-800 p-1.5 rounded ${colorClass}`}
-          >
+          <div key={i} className={`bg-slate-800 p-1.5 rounded ${colorClass}`}>
             <span dangerouslySetInnerHTML={{ __html: c.icon }} />{" "}
             <b>{c.value}</b>
           </div>
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 
 function ErrorLine({ msg }: { msg: string }) {
-  if (!msg) return <div className="text-[11px] min-h-[14px]">&nbsp;</div>
+  if (!msg) return <div className="text-[11px] min-h-[14px]">&nbsp;</div>;
   return (
     <div className="text-[11px] text-rose-400 min-h-[14px]">
-      <span dangerouslySetInnerHTML={{ __html: "&#9888;&#65039;" }} />{" "}
-      {msg}
+      <span dangerouslySetInnerHTML={{ __html: "&#9888;&#65039;" }} /> {msg}
     </div>
-  )
+  );
 }
