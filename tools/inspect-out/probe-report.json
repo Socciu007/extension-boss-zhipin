@@ -1,0 +1,168 @@
+{
+  "chatListRoot": {
+    "hits": [
+      {
+        "selector": ".user-list",
+        "count": 1,
+        "sample": "<div data-v-49c0afb8=\"\" class=\"user-list b-scroll-stable\"><div role=\"thead\" class=\"\"><div data-v-49c0afb8=\"\"><div data-v-4074b514=\"\" data-v-49c0afb8=\"\"><!----></div> </div></div><div role=\"group\" class=\"\" style=\"padding: 0px 0px 4680px;\"><div role=\"listitem\" key=\"760382566-0\" class=\"\"><div data-v-8922d7f0=\"\" d-c=\"61017\" class=\"geek-item-wrap\"><!----> <div data-v-8922d7f0=\"\" id=\"_760382566-0\" data-",
+        "parentClass": "user-container"
+      },
+      {
+        "selector": ".user-container",
+        "count": 1,
+        "sample": "<div data-v-49c0afb8=\"\" class=\"user-container\"><div data-v-49c0afb8=\"\" class=\"user-list b-scroll-stable\"><div role=\"thead\" class=\"\"><div data-v-49c0afb8=\"\"><div data-v-4074b514=\"\" data-v-49c0afb8=\"\"><!----></div> </div></div><div role=\"group\" class=\"\" style=\"padding: 0px 0px 4680px;\"><div role=\"listitem\" key=\"760382566-0\" class=\"\"><div data-v-8922d7f0=\"\" d-c=\"61017\" class=\"geek-item-wrap\"><!----> ",
+        "parentClass": "chat-user"
+      },
+      {
+        "selector": "#container [class*=\"user-list\"]",
+        "count": 1,
+        "sample": "<div data-v-49c0afb8=\"\" class=\"user-list b-scroll-stable\"><div role=\"thead\" class=\"\"><div data-v-49c0afb8=\"\"><div data-v-4074b514=\"\" data-v-49c0afb8=\"\"><!----></div> </div></div><div role=\"group\" class=\"\" style=\"padding: 0px 0px 4680px;\"><div role=\"listitem\" key=\"760382566-0\" class=\"\"><div data-v-8922d7f0=\"\" d-c=\"61017\" class=\"geek-item-wrap\"><!----> <div data-v-8922d7f0=\"\" id=\"_760382566-0\" data-",
+        "parentClass": "user-container"
+      }
+    ],
+    "miss": [
+      "#container .chat-container-private .user-list",
+      "[role=\"list\"]"
+    ]
+  },
+  "chatListItem": {
+    "hits": [
+      {
+        "selector": "#container [role=\"listitem\"][key]",
+        "count": 40,
+        "sample": "<div role=\"listitem\" key=\"760382566-0\" class=\"\"><div data-v-8922d7f0=\"\" d-c=\"61017\" class=\"geek-item-wrap\"><!----> <div data-v-8922d7f0=\"\" id=\"_760382566-0\" data-id=\"760382566-0\" class=\"geek-item\"><!----> <!----> <div data-v-8922d7f0=\"\" class=\"figure\"><span data-v-7778bec2=\"\" data-v-8922d7f0=\"\" class=\"badge\"><div data-v-213af8b4=\"\" data-v-8922d7f0=\"\" class=\"image-content\" data-v-7778bec2=\"\" style=",
+        "parentClass": ""
+      },
+      {
+        "selector": "#container [role=\"listitem\"]",
+        "count": 40,
+        "sample": "<div role=\"listitem\" key=\"760382566-0\" class=\"\"><div data-v-8922d7f0=\"\" d-c=\"61017\" class=\"geek-item-wrap\"><!----> <div data-v-8922d7f0=\"\" id=\"_760382566-0\" data-id=\"760382566-0\" class=\"geek-item\"><!----> <!----> <div data-v-8922d7f0=\"\" class=\"figure\"><span data-v-7778bec2=\"\" data-v-8922d7f0=\"\" class=\"badge\"><div data-v-213af8b4=\"\" data-v-8922d7f0=\"\" class=\"image-content\" data-v-7778bec2=\"\" style=",
+        "parentClass": ""
+      },
+      {
+        "selector": "#container .user-list [role=\"listitem\"]",
+        "count": 40,
+        "sample": "<div role=\"listitem\" key=\"760382566-0\" class=\"\"><div data-v-8922d7f0=\"\" d-c=\"61017\" class=\"geek-item-wrap\"><!----> <div data-v-8922d7f0=\"\" id=\"_760382566-0\" data-id=\"760382566-0\" class=\"geek-item\"><!----> <!----> <div data-v-8922d7f0=\"\" class=\"figure\"><span data-v-7778bec2=\"\" data-v-8922d7f0=\"\" class=\"badge\"><div data-v-213af8b4=\"\" data-v-8922d7f0=\"\" class=\"image-content\" data-v-7778bec2=\"\" style=",
+        "parentClass": ""
+      },
+      {
+        "selector": "#container .user-list > div > div",
+        "count": 41,
+        "sample": "<div data-v-49c0afb8=\"\"><div data-v-4074b514=\"\" data-v-49c0afb8=\"\"><!----></div> </div>",
+        "parentClass": ""
+      }
+    ],
+    "miss": [
+      "li[data-uid]",
+      "li[data-geek-id]"
+    ]
+  },
+  "unreadBadge": {
+    "hits": [
+      {
+        "selector": "[class*=\"badge\"]",
+        "count": 103,
+        "sample": "<span data-v-7778bec2=\"\" class=\"menu-chat-badge badge\"> <span data-v-7778bec2=\"\" class=\"badge-count badge-count-alone badge-count-common-mid\"><span data-v-7778bec2=\"\">234</span></span></span>",
+        "parentClass": "router-link-exact-active router-link-active router-link-active"
+      },
+      {
+        "selector": "em[class*=\"num\"]",
+        "count": 1,
+        "sample": "<em data-v-69b9a322=\"\" data-v-7778bec2=\"\" class=\"num\">(199)</em>",
+        "parentClass": "content"
+      }
+    ],
+    "miss": [
+      "[class*=\"unread-count\"]",
+      "[class*=\"unread\"]",
+      "sup"
+    ]
+  },
+  "candidateName": {
+    "hits": [
+      {
+        "selector": "[class*=\"name\"]",
+        "count": 50,
+        "sample": "<div data-v-625a097b=\"\" class=\"label-name label-question\"><a data-v-625a097b=\"\" href=\"https://about.zhipin.com/agreement/?id=postrules\" type=\"desktop\" target=\"_blank\">招聘规范</a></div>",
+        "parentClass": "nav-item"
+      }
+    ],
+    "miss": [
+      "[class*=\"nickname\"]",
+      "span.title"
+    ]
+  },
+  "jobTitle": {
+    "hits": [
+      {
+        "selector": "[class*=\"job\"]",
+        "count": 45,
+        "sample": "<div data-v-49c0afb8=\"\" class=\"chat-job-search\"><div data-v-73d9d3a1=\"\" data-v-49c0afb8=\"\" class=\"chat-job\"><div data-v-73d9d3a1=\"\" class=\"job-select\"><div data-v-73d9d3a1=\"\" class=\"ui-dropmenu ui-dropmenu-label-arrow ui-dropmenu-drop-arrow chat-top-job\"><div class=\"ui-dropmenu-label\"><span data-v-73d9d3a1=\"\" class=\"dropmenu-label chat-select-job\">全部职位</span> <!----> <i class=\"ui-icon-arrow-down\">",
+        "parentClass": "chat-top-filter"
+      },
+      {
+        "selector": "[class*=\"position\"]",
+        "count": 1,
+        "sample": "<dl class=\"menu-position\"><dt><a href=\"/web/chat/job/list\" class=\"\" ka=\"menu-manager-job\" type=\"desktop\"><div class=\"menu-item-content\"><svg data-v-4818b1bc=\"\" aria-hidden=\"true\" width=\"22\" height=\"22\" class=\"boss-svg svg-icon\"><use data-v-4818b1bc=\"\" xlink:href=\"#icon-menu-icon-job-list\"></use> </svg> <span>职位管理</span></div> <!----></a> <!----></dt></dl>",
+        "parentClass": "menu-list"
+      }
+    ],
+    "miss": [
+      "[class*=\"position-tag\"]",
+      "span.label"
+    ]
+  },
+  "snippet": {
+    "hits": [],
+    "miss": [
+      "[class*=\"snippet\"]",
+      "[class*=\"preview\"]",
+      "[class*=\"last-msg\"]",
+      "p.text"
+    ]
+  },
+  "timestamp": {
+    "hits": [
+      {
+        "selector": "[class*=\"time\"]",
+        "count": 40,
+        "sample": "<span data-v-8922d7f0=\"\" class=\"time time-shadow\">\n                    10:14\n                </span>",
+        "parentClass": "title"
+      }
+    ],
+    "miss": [
+      "[class*=\"date\"]",
+      "time"
+    ]
+  },
+  "messagePane": {
+    "hits": [],
+    "miss": [
+      "[class*=\"message-list\"]",
+      "[class*=\"chat-body\"]",
+      "[class*=\"msg-list\"]"
+    ]
+  },
+  "messageBubble": {
+    "hits": [],
+    "miss": [
+      "[class*=\"message-item\"]",
+      "[class*=\"msg-item\"]",
+      "[class*=\"bubble\"]"
+    ]
+  },
+  "input": {
+    "hits": [],
+    "miss": [
+      "[contenteditable=\"true\"]"
+    ]
+  },
+  "sendButton": {
+    "hits": [],
+    "miss": [
+      "button[class*=\"send\"]",
+      "a[class*=\"send\"]",
+      "[class*=\"send-btn\"]"
+    ]
+  }
+}
