@@ -30,19 +30,19 @@
       {
         "selector": "#container [role=\"listitem\"][key]",
         "count": 40,
-        "sample": "<div role=\"listitem\" key=\"760382566-0\" class=\"\"><div data-v-8922d7f0=\"\" d-c=\"61017\" class=\"geek-item-wrap\"><!----> <div data-v-8922d7f0=\"\" id=\"_760382566-0\" data-id=\"760382566-0\" class=\"geek-item\"><!----> <!----> <div data-v-8922d7f0=\"\" class=\"figure\"><span data-v-7778bec2=\"\" data-v-8922d7f0=\"\" class=\"badge\"><div data-v-213af8b4=\"\" data-v-8922d7f0=\"\" class=\"image-content\" data-v-7778bec2=\"\" style=",
+        "sample": "<div role=\"listitem\" key=\"760382566-0\" class=\"\"><div data-v-8922d7f0=\"\" d-c=\"61017\" class=\"geek-item-wrap\"><!----> <div data-v-8922d7f0=\"\" id=\"_760382566-0\" data-id=\"760382566-0\" class=\"geek-item selected\"><!----> <!----> <div data-v-8922d7f0=\"\" class=\"figure\"><span data-v-7778bec2=\"\" data-v-8922d7f0=\"\" class=\"badge\"><div data-v-213af8b4=\"\" data-v-8922d7f0=\"\" class=\"image-content\" data-v-7778bec2=",
         "parentClass": ""
       },
       {
         "selector": "#container [role=\"listitem\"]",
         "count": 40,
-        "sample": "<div role=\"listitem\" key=\"760382566-0\" class=\"\"><div data-v-8922d7f0=\"\" d-c=\"61017\" class=\"geek-item-wrap\"><!----> <div data-v-8922d7f0=\"\" id=\"_760382566-0\" data-id=\"760382566-0\" class=\"geek-item\"><!----> <!----> <div data-v-8922d7f0=\"\" class=\"figure\"><span data-v-7778bec2=\"\" data-v-8922d7f0=\"\" class=\"badge\"><div data-v-213af8b4=\"\" data-v-8922d7f0=\"\" class=\"image-content\" data-v-7778bec2=\"\" style=",
+        "sample": "<div role=\"listitem\" key=\"760382566-0\" class=\"\"><div data-v-8922d7f0=\"\" d-c=\"61017\" class=\"geek-item-wrap\"><!----> <div data-v-8922d7f0=\"\" id=\"_760382566-0\" data-id=\"760382566-0\" class=\"geek-item selected\"><!----> <!----> <div data-v-8922d7f0=\"\" class=\"figure\"><span data-v-7778bec2=\"\" data-v-8922d7f0=\"\" class=\"badge\"><div data-v-213af8b4=\"\" data-v-8922d7f0=\"\" class=\"image-content\" data-v-7778bec2=",
         "parentClass": ""
       },
       {
         "selector": "#container .user-list [role=\"listitem\"]",
         "count": 40,
-        "sample": "<div role=\"listitem\" key=\"760382566-0\" class=\"\"><div data-v-8922d7f0=\"\" d-c=\"61017\" class=\"geek-item-wrap\"><!----> <div data-v-8922d7f0=\"\" id=\"_760382566-0\" data-id=\"760382566-0\" class=\"geek-item\"><!----> <!----> <div data-v-8922d7f0=\"\" class=\"figure\"><span data-v-7778bec2=\"\" data-v-8922d7f0=\"\" class=\"badge\"><div data-v-213af8b4=\"\" data-v-8922d7f0=\"\" class=\"image-content\" data-v-7778bec2=\"\" style=",
+        "sample": "<div role=\"listitem\" key=\"760382566-0\" class=\"\"><div data-v-8922d7f0=\"\" d-c=\"61017\" class=\"geek-item-wrap\"><!----> <div data-v-8922d7f0=\"\" id=\"_760382566-0\" data-id=\"760382566-0\" class=\"geek-item selected\"><!----> <!----> <div data-v-8922d7f0=\"\" class=\"figure\"><span data-v-7778bec2=\"\" data-v-8922d7f0=\"\" class=\"badge\"><div data-v-213af8b4=\"\" data-v-8922d7f0=\"\" class=\"image-content\" data-v-7778bec2=",
         "parentClass": ""
       },
       {
@@ -61,14 +61,14 @@
     "hits": [
       {
         "selector": "[class*=\"badge\"]",
-        "count": 103,
-        "sample": "<span data-v-7778bec2=\"\" class=\"menu-chat-badge badge\"> <span data-v-7778bec2=\"\" class=\"badge-count badge-count-alone badge-count-common-mid\"><span data-v-7778bec2=\"\">234</span></span></span>",
+        "count": 105,
+        "sample": "<span data-v-7778bec2=\"\" class=\"menu-chat-badge badge\"> <span data-v-7778bec2=\"\" class=\"badge-count badge-count-alone badge-count-common-mid\"><span data-v-7778bec2=\"\">233</span></span></span>",
         "parentClass": "router-link-exact-active router-link-active router-link-active"
       },
       {
         "selector": "em[class*=\"num\"]",
         "count": 1,
-        "sample": "<em data-v-69b9a322=\"\" data-v-7778bec2=\"\" class=\"num\">(199)</em>",
+        "sample": "<em data-v-69b9a322=\"\" data-v-7778bec2=\"\" class=\"num\">(198)</em>",
         "parentClass": "content"
       }
     ],
@@ -82,7 +82,7 @@
     "hits": [
       {
         "selector": "[class*=\"name\"]",
-        "count": 50,
+        "count": 55,
         "sample": "<div data-v-625a097b=\"\" class=\"label-name label-question\"><a data-v-625a097b=\"\" href=\"https://about.zhipin.com/agreement/?id=postrules\" type=\"desktop\" target=\"_blank\">招聘规范</a></div>",
         "parentClass": "nav-item"
       }
@@ -96,20 +96,25 @@
     "hits": [
       {
         "selector": "[class*=\"job\"]",
-        "count": 45,
+        "count": 49,
         "sample": "<div data-v-49c0afb8=\"\" class=\"chat-job-search\"><div data-v-73d9d3a1=\"\" data-v-49c0afb8=\"\" class=\"chat-job\"><div data-v-73d9d3a1=\"\" class=\"job-select\"><div data-v-73d9d3a1=\"\" class=\"ui-dropmenu ui-dropmenu-label-arrow ui-dropmenu-drop-arrow chat-top-job\"><div class=\"ui-dropmenu-label\"><span data-v-73d9d3a1=\"\" class=\"dropmenu-label chat-select-job\">全部职位</span> <!----> <i class=\"ui-icon-arrow-down\">",
         "parentClass": "chat-top-filter"
       },
       {
         "selector": "[class*=\"position\"]",
-        "count": 1,
+        "count": 6,
         "sample": "<dl class=\"menu-position\"><dt><a href=\"/web/chat/job/list\" class=\"\" ka=\"menu-manager-job\" type=\"desktop\"><div class=\"menu-item-content\"><svg data-v-4818b1bc=\"\" aria-hidden=\"true\" width=\"22\" height=\"22\" class=\"boss-svg svg-icon\"><use data-v-4818b1bc=\"\" xlink:href=\"#icon-menu-icon-job-list\"></use> </svg> <span>职位管理</span></div> <!----></a> <!----></dt></dl>",
         "parentClass": "menu-list"
+      },
+      {
+        "selector": "span.label",
+        "count": 2,
+        "sample": "<span data-v-e3ec355c=\"\" class=\"label\">沟通职位：</span>",
+        "parentClass": "job-content"
       }
     ],
     "miss": [
-      "[class*=\"position-tag\"]",
-      "span.label"
+      "[class*=\"position-tag\"]"
     ]
   },
   "snippet": {
@@ -125,7 +130,7 @@
     "hits": [
       {
         "selector": "[class*=\"time\"]",
-        "count": 40,
+        "count": 47,
         "sample": "<span data-v-8922d7f0=\"\" class=\"time time-shadow\">\n                    10:14\n                </span>",
         "parentClass": "title"
       }
@@ -136,26 +141,43 @@
     ]
   },
   "messagePane": {
-    "hits": [],
+    "hits": [
+      {
+        "selector": "[class*=\"message-list\"]",
+        "count": 1,
+        "sample": "<div data-v-0b85b16f=\"\" class=\"chat-message-list is-to-top\"><div data-v-0b85b16f=\"\" class=\"message-item\"><div class=\"message-time\"><span class=\"time\"> 10:14</span></div> <div data-v-59f0f13c=\"\" class=\"item-resume\"><div data-v-59f0f13c=\"\" class=\"item-system\"><div data-v-59f0f13c=\"\" class=\"message-card-wrap blue\"><div class=\"message-card-top-wrap\"><div class=\"message-card-top-icon-content\"><img src=",
+        "parentClass": "conversation-message"
+      }
+    ],
     "miss": [
-      "[class*=\"message-list\"]",
       "[class*=\"chat-body\"]",
       "[class*=\"msg-list\"]"
     ]
   },
   "messageBubble": {
-    "hits": [],
+    "hits": [
+      {
+        "selector": "[class*=\"message-item\"]",
+        "count": 2,
+        "sample": "<div data-v-0b85b16f=\"\" class=\"message-item\"><div class=\"message-time\"><span class=\"time\"> 10:14</span></div> <div data-v-59f0f13c=\"\" class=\"item-resume\"><div data-v-59f0f13c=\"\" class=\"item-system\"><div data-v-59f0f13c=\"\" class=\"message-card-wrap blue\"><div class=\"message-card-top-wrap\"><div class=\"message-card-top-icon-content\"><img src=\"https://img.bosszhipin.com/static/file/2023/eruki1eq3r16901",
+        "parentClass": "chat-message-list is-to-top"
+      }
+    ],
     "miss": [
-      "[class*=\"message-item\"]",
       "[class*=\"msg-item\"]",
       "[class*=\"bubble\"]"
     ]
   },
   "input": {
-    "hits": [],
-    "miss": [
-      "[contenteditable=\"true\"]"
-    ]
+    "hits": [
+      {
+        "selector": "[contenteditable=\"true\"]",
+        "count": 1,
+        "sample": "<div data-v-427f1944=\"\" id=\"boss-chat-editor-input\" contenteditable=\"true\" class=\"boss-chat-editor-input\" traceid=\"1jqt6hr5r\"></div>",
+        "parentClass": "conversation-editor"
+      }
+    ],
+    "miss": []
   },
   "sendButton": {
     "hits": [],

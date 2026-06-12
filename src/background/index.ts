@@ -26,13 +26,12 @@ storage.releaseRunLock().catch(() => { })
 // Message handler from the popup.
 chrome.runtime.onMessage.addListener((msg: PopupToSw, _sender, sendResponse) => {
   console.log('msg', msg)
-  const resP = handlePopupMessage(msg)
+  handlePopupMessage(msg)
     .then((res) => sendResponse(res))
     .catch(async (e) => {
       await storage.recordError(String(e))
       sendResponse(await stateNow())
     })
-  console.log('resP', resP)
   return true // async response
 })
 

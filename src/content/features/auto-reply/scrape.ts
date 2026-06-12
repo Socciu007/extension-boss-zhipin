@@ -15,10 +15,30 @@ export function bootstrap(): void {
 
 // Return all conversations that have an unread badge. Each item carries the
 // metadata SW needs to call Gemini and to render the counter.
-export function findUnread(): Conversation[] {
-  const root = $(SEL.chatListRoot)
-  if (!root) return []
-  const rows = $$(SEL.chatListItem, root)
+//
+// We wait briefly for the chat list root to appear, because React mounts the
+// BOSS chat UI asynchronously after page load. If the SW calls SCRAPE_UNREAD
+// within the first second of clicking the toggle button, the list won't be
+// in the DOM yet.
+export async function findUnread(): Promise<Conversation[]> {
+  const root = await waitFor(SEL.chatListRoot, { timeout: 5000 }).catch(() => null)
+  if (!root) {
+    console.warn('[auto-reply/scrape] chat list root not found after 5s')
+    // Fallback: return whatever is on the page so the SW can still get SOMETHING.
+    return fallbackAllRows()
+  }
+  return collectRows(root as HTMLElement)
+}
+
+function fallbackAllRows(): Conversation[] {
+  // Best-effort scrape: try every row-like selector at document level.
+  const rows = $$(SEL.chatListItem)
+  console.warn('[auto-reply/scrape] fallback scrape — rows found:', rows.length)
+  return collectRows(document, rows)
+}
+
+function collectRows(scope: ParentNode, provided?: Element[]): Conversation[] {
+  const rows = provided ?? $$(SEL.chatListItem, scope)
   const out: Conversation[] = []
 
   rows.forEach((row, i) => {
@@ -33,11 +53,12 @@ export function findUnread(): Conversation[] {
       id: rowId(row, i),
       candidateName: name,
       jobTitle: job,
-      lastSnippet: snippet.slice(0, 80),
+      lastSnippet: snippet,
       lastRepliedAt: 0,
     })
   })
 
+  console.log('[auto-reply/scrape] rows total:', rows.length, '| unread:', out.length)
   return out
 }
 
@@ -50,7 +71,7 @@ export async function openConv(convId: string): Promise<HTMLElement> {
   const target = rows.find((r, i) => rowId(r, i) === convId)
   if (!target) throw new Error(`row not found: ${convId}`)
 
-  ;(target as HTMLElement).click()
+    ; (target as HTMLElement).click()
   // Wait for message pane to appear (or for stale bubble to change).
   const pane = await waitFor(SEL.messagePane, { timeout: 5000 })
   // Small settle delay so the very-last bubble is from the right convo.
@@ -83,8 +104,8 @@ export function readLastCandidateMessage(pane: HTMLElement): string {
 export async function focusUnreadTab(): Promise<boolean> {
   const tab = $(SEL.unreadTab)
   if (!tab) return false
-  ;(tab as HTMLElement).click()
-  await waitGone(['[class*="loading"]'], { timeout: 2000 }).catch(() => {})
+    ; (tab as HTMLElement).click()
+  await waitGone(['[class*="loading"]'], { timeout: 2000 }).catch(() => { })
   await sleep(200)
   return true
 }

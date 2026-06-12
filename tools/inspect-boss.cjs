@@ -209,6 +209,29 @@ async function main() {
     console.log('')
   }
 
+  // Actionable hints when expected groups have no hits.
+  const emptyGroups = Object.entries(report)
+    .filter(([, e]) => e.hits.length === 0)
+    .map(([n]) => n)
+  if (emptyGroups.length) {
+    console.log('\n=== ACTION REQUIRED ===\n')
+    const needConv = emptyGroups.filter((g) =>
+      ['messagePane', 'messageBubble', 'input', 'sendButton'].includes(g),
+    )
+    if (needConv.length) {
+      console.log(' These groups need a CONVERSATION to be open on the page:')
+      for (const g of needConv) console.log(' -', g)
+      console.log(' -> Open any chat row in BOSS, wait for the right panel to render, then re-run this script.')
+    }
+    const structural = emptyGroups.filter((g) =>
+      ['chatListRoot', 'chatListItem', 'candidateName', 'jobTitle', 'snippet', 'timestamp', 'unreadBadge'].includes(g),
+    )
+    if (structural.length) {
+      console.log(' These groups missing on the LIST page suggest the URL is wrong, the chat list is in shadow DOM, or BOSS rolled a new build:')
+      for (const g of structural) console.log(' -', g)
+    }
+  }
+
   fs.writeFileSync(
     path.join(OUT_DIR, 'probe-report.json'),
     JSON.stringify(report, null, 2),

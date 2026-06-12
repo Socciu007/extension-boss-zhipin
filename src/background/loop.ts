@@ -19,7 +19,10 @@ function sendToTab<T extends SwToContent>(tabId: number, msg: T): Promise<Conten
   return chrome.tabs
     .sendMessage(tabId, msg)
     .then((r) => r as ContentToSw | null)
-    .catch(() => null)
+    .catch((e) => {
+      console.warn('[bg/loop] sendToTab failed:', msg.type, String(e))
+      return null
+    })
 }
 
 // Pick the first conversation that has not been replied to yet (or whose reply
@@ -27,6 +30,7 @@ function sendToTab<T extends SwToContent>(tabId: number, msg: T): Promise<Conten
 // in the replied cache.
 async function pickOneUnreplied(tabId: number): Promise<Conversation | null> {
   const reply = await sendToTab(tabId, { type: 'SCRAPE_UNREAD' })
+  console.log('reply', reply)
   if (!reply || reply.type !== 'UNREAD_LIST') return null
   for (const conv of reply.conversations) {
     if (!(await storage.hasReplied(conv.id))) return conv
@@ -48,13 +52,14 @@ export async function runOnce(): Promise<void> {
 
     const tabId = await findZhipinTab()
     if (!tabId) return
-    
+
     const conv = await pickOneUnreplied(tabId)
     console.log('conv', conv)
     if (!conv) return
 
     // Open conversation, then read the last candidate message.
     const opened = await sendToTab(tabId, { type: 'OPEN_CONV', convId: conv.id })
+    console.log('opened', opened)
     if (!opened || opened.type !== 'CONV_OPENED') {
       await storage.recordError(`openConv failed for ${conv.id}`)
       return
