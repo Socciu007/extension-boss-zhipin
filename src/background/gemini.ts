@@ -35,6 +35,7 @@ export async function generateReply(
     console.warn('[bg/gemini] no options parsed from response, raw:', raw.slice(0, 120))
     return raw || FALLBACK_REPLY
   }
+  console.log('options', options)
 
   // Randomly pick one of the 3 options.
   const pick = options[Math.floor(Math.random() * options.length)]

@@ -30,8 +30,12 @@ function sendToTab<T extends SwToContent>(tabId: number, msg: T): Promise<Conten
 async function pickOneUnreplied(tabId: number): Promise<Conversation | null> {
   const reply = await sendToTab(tabId, { type: 'SCRAPE_UNREAD' })
   console.log('reply', reply)
-  if (!reply || reply.type !== 'UNREAD_LIST') return null
-  for (const conv of reply.conversations) {
+  if (!reply || reply.type !== 'UNREAD_LIST') {
+      await storage.setEnabled(false)
+      await storage.recordError('Please try to load the chat page again before enabling auto-reply.')
+      return null
+  }
+  for (const conv of reply?.conversations) {
     if (!(await storage.hasReplied(conv.id))) return conv
   }
   return null
@@ -46,7 +50,18 @@ export async function runOnce(): Promise<void> {
     if (!cur.enabled) return
     await storage.resetDailyStatsIfStale()
     const stats = (await storage.getAll()).stats
-    if (stats.sent >= cur.config.dailyLimit) return
+    if (stats.sent >= cur.config.dailyLimit) {
+      // Hit the daily cap. Turn off the toggle so the popup can surface a
+      // toast and the next click won't re-trigger until tomorrow (when
+      // resetDailyStatsIfStale clears the counter).
+      if (cur.enabled) {
+        await storage.setEnabled(false)
+        await storage.recordError(
+          `Reached daily limit ${cur.config.dailyLimit} replies/day. Auto-reply is disabled.`,
+        )
+      }
+      return
+    }
     // (No schedule check — user clicks the button to start the loop.)
 
     const tabId = await findZhipinTab()

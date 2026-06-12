@@ -42,7 +42,4 @@ export default defineManifest({
       run_at: 'document_idle',
     },
   ],
-  side_panel: {
-    default_path: 'src/sidepanel/index.html',
-  },
 })

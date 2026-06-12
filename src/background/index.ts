@@ -39,15 +39,7 @@ async function handlePopupMessage(msg: PopupToSw): Promise<SwToPopup> {
   switch (msg.type) {
     case 'GET_STATE': {
       const cur = await storage.getAll()
-      return {
-        type: 'STATE',
-        enabled: cur.enabled,
-        sent: cur.stats.sent,
-        dailyLimit: cur.config.dailyLimit,
-        errors: cur.stats.errors,
-        lastErrorMsg: cur.stats.lastErrorMsg,
-        isRunning: cur.isRunning,
-      }
+      return buildState(cur)
     }
     case 'TOGGLE_ENABLED':
       await storage.setEnabled(msg.enabled)
@@ -70,8 +62,7 @@ async function handlePopupMessage(msg: PopupToSw): Promise<SwToPopup> {
   }
 }
 
-async function stateNow(): Promise<SwToPopup> {
-  const cur = await storage.getAll()
+function buildState(cur: Awaited<ReturnType<typeof storage.getAll>>): SwToPopup {
   return {
     type: 'STATE',
     enabled: cur.enabled,
@@ -80,5 +71,11 @@ async function stateNow(): Promise<SwToPopup> {
     errors: cur.stats.errors,
     lastErrorMsg: cur.stats.lastErrorMsg,
     isRunning: cur.isRunning,
+    reachedDailyLimit: cur.stats.sent >= cur.config.dailyLimit,
   }
+}
+
+async function stateNow(): Promise<SwToPopup> {
+  const cur = await storage.getAll()
+  return buildState(cur)
 }

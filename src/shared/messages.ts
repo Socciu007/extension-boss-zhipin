@@ -14,6 +14,7 @@ type SwToContent =
 
 type ContentToSw =
  | { type: 'PONG' }
+ | { type: 'TOGGLE_ENABLED'; enabled: boolean }
  | { type: 'UNREAD_LIST'; conversations: Conversation[] }
  | { type: 'CONV_OPENED'; convId: string }
  | { type: 'LAST_MESSAGE'; convId: string; text: string }
@@ -42,6 +43,10 @@ type SwToPopup = {
  errors: number
  lastErrorMsg: string
  isRunning: boolean
+ // True when sent today has reached dailyLimit. Cleared at midnight by
+ // resetDailyStatsIfStale. The popup uses this to surface a "limit reached"
+ // toast and to prevent the user from re-enabling until tomorrow.
+ reachedDailyLimit: boolean
 }
 
 export type {

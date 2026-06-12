@@ -3,7 +3,7 @@
 // The loop runs only when the user clicks the button — no time-based scheduling.
 // Polls the service worker once per second while the popup is open.
 import "./index.css";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ButtonComponent from "@/components/ButtonComponent";
 import { showToast } from "./scripts";
 import type { PopupToSw, SwToPopup } from "@/shared/messages";
@@ -16,11 +16,16 @@ const DEFAULT_STATE: SwToPopup = {
   errors: 0,
   lastErrorMsg: "",
   isRunning: false,
+  reachedDailyLimit: false,
 };
 
 export default function App() {
   const [state, setState] = useState<SwToPopup>(DEFAULT_STATE);
   const [toggling, setToggling] = useState(false);
+  // Track the last-seen value of reachedDailyLimit so we only fire the
+  // "limit reached" toast on the transition (not on every poll).
+  const lastReached = useRef(false);
+  const toastInFlight = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,7 +34,28 @@ export default function App() {
         const r = await chrome.runtime.sendMessage({
           type: "GET_STATE",
         } satisfies PopupToSw);
-        if (!cancelled && r && r.type === "STATE") setState(r);
+        if (!cancelled && r && r.type === "STATE") {
+          const next = r;
+          // Detect transition false -> true: daily limit just got hit.
+          if (
+            next.reachedDailyLimit &&
+            !lastReached.current &&
+            !toastInFlight.current
+          ) {
+            toastInFlight.current = true;
+            showToast(
+              `Reached daily limit ${next.dailyLimit} replies/day. Auto-reply is disabled.`,
+              "warning"
+            );
+            // Release the in-flight latch after the toast duration so the user
+            // can re-enable tomorrow without re-triggering on every poll.
+            setTimeout(() => {
+              toastInFlight.current = false;
+            }, 3500);
+          }
+          lastReached.current = next.reachedDailyLimit;
+          setState(next);
+        }
       } catch {
         // SW may not be ready yet (cold start) — ignore and retry on next tick.
       }
@@ -44,6 +70,13 @@ export default function App() {
 
   const onToggle = async () => {
     if (toggling) return;
+    if (state.reachedDailyLimit && !state.enabled) {
+      showToast(
+        `Reached daily limit ${state.dailyLimit} replies/day. Please try again tomorrow.`,
+        "warning"
+      );
+      return;
+    }
     setToggling(true);
     const next = !state.enabled;
     try {
@@ -52,7 +85,10 @@ export default function App() {
         enabled: next,
       } satisfies PopupToSw);
       if (r && r.type === "STATE") setState(r);
-      showToast(next ? "Đã bật auto-reply" : "Đã tắt auto-reply", "info");
+      showToast(
+        next ? "Auto-reply is enabled" : "Auto-reply is disabled",
+        "info"
+      );
     } catch (e) {
       showToast(`Error: ${(e as Error).message}`, "error");
     } finally {
@@ -74,7 +110,8 @@ export default function App() {
       <ToggleRow
         enabled={state.enabled}
         onClick={onToggle}
-        disabled={toggling}
+        disabled={toggling || state.reachedDailyLimit}
+        limitReached={state.reachedDailyLimit}
       />
       <StatusGrid state={state} />
       <ErrorLine msg={state.lastErrorMsg} />
@@ -86,36 +123,46 @@ function ToggleRow({
   enabled,
   onClick,
   disabled,
+  limitReached,
 }: {
   enabled: boolean;
   onClick: () => void;
   disabled: boolean;
+  limitReached: boolean;
 }) {
+  const buttonLabel = limitReached ? "Disable" : enabled ? "Disable" : "Enable";
   return (
     <div
       className={`flex items-center justify-between p-3 rounded-md mb-2 ${
-        enabled ? "bg-emerald-900" : "bg-slate-800"
+        limitReached
+          ? "bg-amber-900"
+          : enabled
+          ? "bg-emerald-900"
+          : "bg-slate-800"
       }`}
     >
       <div>
         <div className="text-[13px] font-semibold">Auto-reply</div>
         <div
           className={`text-[11px] ${
-            enabled ? "text-emerald-300" : "text-slate-400"
+            limitReached
+              && "text-amber-300"
           }`}
         >
-          {enabled ? "Đang chạy" : "Đã dừng"}
+          {limitReached && "Reached daily limit"}
         </div>
       </div>
       <ButtonComponent
         onClick={onClick}
-        text={enabled ? "Tắt" : "Bật"}
+        text={buttonLabel}
         classNameProps={
-          enabled
+          limitReached
+            ? "!bg-amber-700 !cursor-not-allowed hover:!bg-amber-700"
+            : enabled
             ? "!bg-rose-600 hover:!bg-rose-500"
             : "!bg-emerald-600 hover:!bg-emerald-500"
         }
-        disabled={disabled}
+        disabled={disabled || limitReached}
       />
     </div>
   );
@@ -128,10 +175,10 @@ function StatusGrid({ state }: { state: SwToPopup }) {
   const enabled = state.enabled;
   const cells: { icon: string; value: string; active?: boolean }[] = [
     { icon: "&#128236;", value: `${state.sent}/${state.dailyLimit}` },
-    { icon: "&#9888;&#65039;", value: `${state.errors} lỗi` },
+    { icon: "&#9888;&#65039;", value: `${state.errors} errors` },
     {
       icon: "&#128260;",
-      value: state.isRunning ? "Đang chạy" : "Đã dừng",
+      value: state.isRunning ? "Running" : "Stopped",
       active: state.isRunning,
     },
     // (Schedule cell removed — loop runs only when user clicks the button.)

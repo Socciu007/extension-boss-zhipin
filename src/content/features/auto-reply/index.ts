@@ -71,11 +71,11 @@ chrome.runtime.onMessage.addListener((msg: SwToContent, _sender, sendResponse) =
             .typeAndSend(msg.text)
             .then(() => {
               reply({ type: 'REPLY_SENT', convId: msg.convId, ok: true })
-              sendResponse({ ok: true })
+              sendResponse({ type: 'REPLY_SENT', convId: msg.convId, ok: true })
             })
             .catch((e) => {
               reply({ type: 'REPLY_SENT', convId: msg.convId, ok: false, error: String(e) })
-              sendResponse({ ok: false, error: String(e) })
+              sendResponse({ type: 'REPLY_SENT', convId: msg.convId, ok: false, error: String(e) })
             })
           return
 
