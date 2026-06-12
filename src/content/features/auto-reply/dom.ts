@@ -87,37 +87,56 @@ export const SEL = {
     '[d-c]:has-text("未读")',
   ],
 
-  // Right panel: messages area. (Selectors not yet verified — re-run
-  // tools/inspect-boss.cjs with a conversation open to verify.)
+  // Right panel: messages area.
+  // Verified: <div class="chat-message-list is-to-top"> is the list root;
+  // each message is <div class="message-item">.
   messagePane: [
+    '.chat-message-list',
+    '[class*="chat-message-list"]',
     '[class*="message-list"]',
     '[class*="chat-body"]',
     '[class*="msg-list"]',
   ],
 
-  // One message bubble inside the pane.
+  // One message bubble inside the pane. BOTH system cards (.item-resume)
+  // and candidate messages (.item-friend) wrap a .message-item — but we
+  // only want the last candidate's text, so the caller filters.
   messageBubble: [
+    '.chat-message-list .message-item',
+    '.message-item',
     '[class*="message-item"]',
     '[class*="msg-item"]',
     '[class*="bubble"]',
   ],
 
-  // Text body inside a bubble.
+  // Text body inside a bubble. Candidate messages use .item-friend > .text > span;
+  // system cards use .message-card-top-text.
   bubbleText: [
+    '.item-friend .text span',
+    '.item-friend .text',
+    '.message-card-top-text',
     '[class*="text"]',
     '[class*="content"]',
     'span.text',
   ],
 
-  // Composer (contenteditable input). (Not yet verified.)
+  // Composer (contenteditable input).
+  // Verified: <div id="boss-chat-editor-input" contenteditable="true" class="boss-chat-editor-input">.
   input: [
+    '#boss-chat-editor-input',
+    '.boss-chat-editor-input',
     '[contenteditable="true"]',
     'div[contenteditable="true"][class*="input"]',
     'div[contenteditable="true"][class*="editor"]',
   ],
 
-  // Send button next to the composer. (Not yet verified.)
+  // Send button next to the composer.
+  // Verified: <div class="submit-content"><div class="submit">发送</div></div>.
+  // It's a div, not a button — clicking it triggers send.
   sendButton: [
+    '.submit-content .submit',
+    '.submit',
+    '[class*="submit"]',
     'button[class*="send"]',
     'a[class*="send"]',
     '[class*="send-btn"]',

@@ -52,17 +52,17 @@ chrome.runtime.onMessage.addListener((msg: SwToContent, _sender, sendResponse) =
             .openConv(msg.convId)
             .then((pane) => {
               reply({ type: 'CONV_OPENED', convId: msg.convId })
-              sendResponse({ ok: true, hasPane: !!pane })
+              sendResponse({ type: 'CONV_OPENED', convId: msg.convId, hasPane: !!pane })
             })
             .catch((e) => sendResponse({ ok: false, error: String(e) }))
           return
 
         case 'READ_LAST_MESSAGE': {
           // Re-find pane: SW calls this AFTER OPEN_CONV succeeded.
-          const pane = document.querySelector(SEL.messagePane[0]) as HTMLElement | null
-          const text = pane ? scrape.readLastCandidateMessage(pane) : ''
+          const pane = $(SEL.messagePane) as HTMLElement | null
+          const text = pane?.textContent?.trim() ? await scrape.readLastCandidateMessage(pane) : ''
           reply({ type: 'LAST_MESSAGE', convId: msg.convId, text })
-          sendResponse({ ok: true, text })
+          sendResponse({ type: 'LAST_MESSAGE', convId: msg.convId, text })
           return
         }
 

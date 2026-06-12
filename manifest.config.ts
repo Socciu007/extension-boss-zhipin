@@ -28,6 +28,8 @@ export default defineManifest({
   host_permissions: [
     'https://generativelanguage.googleapis.com/*',
     'https://*.zhipin.com/*',
+    'http://ai.dadaex.cn/*',
+    'https://ai.dadaex.cn/*',
   ],
   background: {
     service_worker: 'src/background/index.ts',

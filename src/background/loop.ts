@@ -4,7 +4,6 @@
 import * as storage from './storage'
 import { jitter } from './scheduler'
 import * as gemini from './gemini'
-import { SYSTEM_PROMPT } from '@/shared/prompt'
 import type { Conversation } from '@/shared/types'
 import type { SwToContent, ContentToSw } from '@/shared/messages'
 
@@ -65,26 +64,23 @@ export async function runOnce(): Promise<void> {
       return
     }
     const last = await sendToTab(tabId, { type: 'READ_LAST_MESSAGE', convId: conv.id })
-    if (!last || last.type !== 'LAST_MESSAGE' || !last.text) {
+    console.log('lastMsg', last)
+    if (!last || last.type !== 'LAST_MESSAGE') {
       await storage.recordError(`No candidate text for ${conv.id}`)
       return
     }
 
-    // Use persisted system prompt (the hardcoded one) — falls back if empty.
-    const configWithPrompt = {
-      ...cur.config,
-      systemPrompt: cur.config.systemPrompt || SYSTEM_PROMPT,
-    }
-
     let reply: string
     try {
-      reply = await gemini.generateReply(configWithPrompt, conv, last.text)
+      reply = await gemini.generateReply(conv, last.text)
     } catch (e) {
       await storage.recordError(`Gemini: ${(e as Error).message}`)
       return
     }
 
+    console.log('replyAI', reply)
     const sent = await sendToTab(tabId, { type: 'SEND_REPLY', convId: conv.id, text: reply })
+    console.log('sentMsg', sent)
     if (!sent || sent.type !== 'REPLY_SENT' || !sent.ok) {
       const errMsg = sent?.type === 'REPLY_SENT' && sent.error ? sent.error : 'unknown'
       await storage.recordError(`Send failed for ${conv.id}: ${errMsg}`)
