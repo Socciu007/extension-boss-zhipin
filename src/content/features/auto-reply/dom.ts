@@ -142,6 +142,86 @@ export const SEL = {
     '[class*="send-btn"]',
     'button[type="button"][class*="btn"]',
   ],
+
+  // === Recommended-candidates page (/web/chat/recommend) ===
+  //
+  // Cards live inside an iframe named "recommendFrame" with src
+  // /web/frame/recommend/... — same-origin so we can read its contentDocument
+  // from the content script. Verified 2026-06-12 via tools/dump-iframe.cjs.
+  //
+  // One card is <div class="card-item">. Inside it:
+  // <div class="candidate-card-wrap css-type-1">
+  //   <div class="card-inner common-wrap css-type-1">
+  //     <div class="row name-wrap">
+  //       <span class="name">李龙飞</span>
+  //       <span class="active-text"></span>
+  //     </div>
+  //     <div class="row">
+  //       <div class="base-info">
+  //         <span>29岁</span> <span>7年</span> <span>本科</span> ...
+  //       </div>
+  //     </div>
+  //     <div class="row row-flex expect-wrap">
+  //       <span class="label">期望</span>
+  //       <span class="content">...</span>
+  //     </div>
+  //   </div>
+  // </div>
+  // ... <button class="btn btn-greet">打招呼</button>
+
+  // One card per candidate.
+  recommendCard: [
+    '.card-item',
+    '.candidate-card-wrap',
+    '[class*="card-item"]',
+  ],
+
+  // Candidate name (e.g. "李龙飞", "张鑫").
+  recommendName: [
+    '.name-wrap .name',
+    '.name',
+  ],
+
+  // Online / active status (e.g. "在线", "刚刚活跃", "刚刚活跃").
+  // Empty <span class="active-text"></span> if inactive.
+  recommendActive: [
+    '.name-wrap .active-text',
+    '.active-text',
+    '.name-wrap [class*="active"]',
+  ],
+
+  // Years of experience (e.g. "7年"). Sits in the second <span> of
+  // .base-info after the age <span>. We extract the 2nd <span>.
+  recommendYears: [
+    '.base-info span:nth-of-type(2)',
+  ],
+
+  // Education (e.g. "本科"). Third <span> in .base-info.
+  recommendEducation: [
+    '.base-info span:nth-of-type(3)',
+  ],
+
+  // "期望" (expectation) row — contains expected salary, location, job.
+  recommendExpect: [
+    '.expect-wrap .content',
+    '.expect-wrap',
+  ],
+
+  // "打招呼" (greet) button on a single card. Verified: <button class="btn btn-greet">.
+  recommendGreetBtn: [
+    '.btn-greet',
+    'button.btn-greet',
+    'button[class*="greet"]',
+  ],
+
+  // Confirm button in the dialog that sometimes pops up after clicking greet
+  // (e.g. "该用户已被您沟通过"). If absent, the click went straight through.
+  recommendConfirmBtn: [
+    '.dialog-container .btn-primary',
+    '.dialog-wrap .btn-primary',
+    '.confirm-btn',
+    'button[class*="primary"]',
+  ],
 } as const
 
 // Try each selector in order. Return the first match (or null).

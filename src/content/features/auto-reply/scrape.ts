@@ -4,6 +4,7 @@
 import { $, $$, SEL, readBadgeCount, rowId } from './dom'
 import { waitFor, waitGone, sleep } from './wait'
 import type { Conversation } from '@/shared/types'
+import type { RecommendedCandidate } from '@/shared/messages'
 
 let bootstrapped = false
 
@@ -60,6 +61,77 @@ function collectRows(scope: ParentNode, provided?: Element[]): Conversation[] {
 
   console.log('[auto-reply/scrape] rows total:', rows.length, '| unread:', out.length)
   return out
+}
+
+// === Recommended-candidates page (/web/chat/recommend) ===
+//
+// Returns every candidate card on the page. Each card is a top-level
+// <div class="card-item"> with name, salary band, job, and an inline
+// "打招呼" button. We don't filter by status — the SW loop will skip
+// cards whose buttons are disabled (e.g. already-greeted today).
+export function findRecommended(): RecommendedCandidate[] {
+  const cards = $$(SEL.recommendCard)
+  console.log('[auto-reply/scrape] recommend cards found:', cards.length)
+
+  return cards.map((card, i) => {
+    const id =
+      (card as HTMLElement).getAttribute('data-geekid') ??
+      (card as HTMLElement).getAttribute('data-uid') ??
+      (card as HTMLElement).getAttribute('data-id') ??
+      `card-${i}-${(card.textContent ?? '').slice(0, 16).replace(/\s+/g, '')}`
+
+    // Helper that finds a child by selector list and returns trimmed text.
+    const txt = (sel: readonly string[]): string =>
+      $(sel, card)?.textContent?.trim() ?? ''
+
+    return {
+      id,
+      name: txt(SEL.recommendName),
+      years: txt(SEL.recommendYears),
+      education: txt(SEL.recommendEducation),
+      activeStatus: txt(SEL.recommendActive),
+    }
+  })
+}
+
+// Click the "打招呼" button on a single recommended card. BOSS may
+// open a confirm modal first; we wait for it and click through. If
+// the button is disabled (already greeted), we resolve { ok: false }.
+export async function greetCandidate(cardId: string): Promise<{ ok: boolean; error?: string }> {
+  const card = findCardById(cardId)
+  if (!card) return { ok: false, error: 'card not found' }
+
+  const btn = $(SEL.recommendGreetBtn, card) as HTMLButtonElement | null
+  if (!btn) return { ok: false, error: 'greet button not found' }
+  if (btn.disabled || btn.classList.contains('disabled')) {
+    return { ok: false, error: 'already greeted or disabled' }
+  }
+
+  btn.scrollIntoView({ block: 'center' })
+  btn.click()
+
+  // Some candidates trigger a confirm dialog (e.g. "该用户已被您沟通过").
+  // Try to confirm; if no dialog, that's fine.
+  const confirm = await waitFor(SEL.recommendConfirmBtn, { timeout: 2000 })
+    .catch(() => null)
+  if (confirm) (confirm as HTMLElement).click()
+
+  // Wait briefly for the chat panel to mount so the next operation
+  // (type & send) can run without a race.
+  await sleep(400)
+  return { ok: true }
+}
+
+function findCardById(cardId: string): Element | null {
+  const cards = $$(SEL.recommendCard)
+  for (const c of cards) {
+    const id =
+      (c as HTMLElement).getAttribute('data-geekid') ??
+      (c as HTMLElement).getAttribute('data-uid') ??
+      (c as HTMLElement).getAttribute('data-id')
+    if (id === cardId) return c
+  }
+  return null
 }
 
 // Click the conversation row and wait for the right panel to render.
@@ -128,6 +200,17 @@ async function waitForMessagePaneSwap(
 
 // Pull the last message text from a conversation. Filters out system
 // messages (e.g. "你已将该职位发送给...") by checking text length and class.
+//
+// BOSS layout:
+// - <div class="item-friend"> = candidate (left side)
+// - <div class="item-self"> = recruiter (right side, that's us, skip)
+// - <div class="item-system"> / .item-resume = resume cards (skip)
+// - <div class="item-time"> = timestamp divider (skip)
+//
+// Strategy: scan bubbles from LAST to FIRST, return the first candidate
+// (item-friend) with non-empty text. Falls back to the last non-system
+// bubble if no candidate message exists yet (e.g. only recruiter has
+// spoken in the conversation).
 export async function readLastCandidateMessage(pane: HTMLElement): Promise<string> {
   // The pane may be just-mounted; wait briefly for at least one bubble
   // to appear. Without this, very fast calls can race the React render.

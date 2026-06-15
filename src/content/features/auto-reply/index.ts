@@ -47,6 +47,28 @@ chrome.runtime.onMessage.addListener((msg: SwToContent, _sender, sendResponse) =
           return
         }
 
+        case 'SCRAPE_RECOMMENDED': {
+          const candidates = scrape.findRecommended()
+          reply({ type: 'RECOMMENDED_LIST', candidates })
+          sendResponse({ type: 'RECOMMENDED_LIST', candidates })
+          return
+        }
+
+        case 'GREET_CANDIDATE': {
+          scrape
+            .greetCandidate(msg.cardId)
+            .then((res) => {
+              reply({ type: 'GREETED', cardId: msg.cardId, ok: res.ok, error: res.error })
+              sendResponse({ type: 'GREETED', cardId: msg.cardId, ok: res.ok, error: res.error })
+            })
+            .catch((e: unknown) => {
+              const err = String(e)
+              reply({ type: 'GREETED', cardId: msg.cardId, ok: false, error: err })
+              sendResponse({ type: 'GREETED', cardId: msg.cardId, ok: false, error: err })
+            })
+          return
+        }
+
         case 'OPEN_CONV':
           scrape
             .openConv(msg.convId)

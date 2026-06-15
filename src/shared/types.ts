@@ -27,15 +27,18 @@ type Persisted = {
   config: AppConfig
   conversations: Record<string, Conversation> // dedupe
   stats: DailyStats
-  enabled: boolean // ON/OFF global
+  enabled: boolean // ON/OFF global (chat-list reply)
   isRunning: boolean // race-guard flag
+  // Recommend-greet flow is independent from the chat-list reply loop.
+  recommendEnabled: boolean
+  recommendGreeted: number // how many candidates greeted today (resets with stats)
 }
 
 const DEFAULT_CONFIG: AppConfig = {
   model: 'gemini-2.5-flash',
   throttleMinMs: 2000,
   throttleMaxMs: 5000,
-  dailyLimit: 100,
+  dailyLimit: 10,
   systemPrompt: '',
 }
 
@@ -45,6 +48,8 @@ const DEFAULT_PERSISTED: Persisted = {
   stats: { date: todayLocal(), sent: 0, errors: 0, lastErrorMsg: '' },
   enabled: false,
   isRunning: false,
+  recommendEnabled: false,
+  recommendGreeted: 0,
 }
 
 const MAX_REPLIED_CACHE = 2000 // LRU bound

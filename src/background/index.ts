@@ -52,6 +52,13 @@ async function handlePopupMessage(msg: PopupToSw): Promise<SwToPopup> {
       // No-op: API key is hardcoded in @/shared/prompt; config is not
       // user-editable in v1. Kept in the union for backward compat.
       return stateNow()
+    case 'TOGGLE_RECOMMEND':
+      await storage.setRecommendEnabled(msg.enabled)
+      if (msg.enabled) {
+        // Fire the recommend-greet loop immediately on click.
+        loop.runRecommendGreetOnce().catch((e) => storage.recordError(String(e)))
+      }
+      return stateNow()
     case 'CLEAR_REPLIED':
       await storage.clearReplied()
       return stateNow()
@@ -72,6 +79,8 @@ function buildState(cur: Awaited<ReturnType<typeof storage.getAll>>): SwToPopup 
     lastErrorMsg: cur.stats.lastErrorMsg,
     isRunning: cur.isRunning,
     reachedDailyLimit: cur.stats.sent >= cur.config.dailyLimit,
+    recommendEnabled: cur.recommendEnabled,
+    recommendGreeted: cur.recommendGreeted,
   }
 }
 

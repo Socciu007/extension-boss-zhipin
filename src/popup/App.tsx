@@ -17,6 +17,8 @@ const DEFAULT_STATE: SwToPopup = {
   lastErrorMsg: "",
   isRunning: false,
   reachedDailyLimit: false,
+  recommendEnabled: false,
+  recommendGreeted: 0,
 };
 
 export default function App() {
@@ -96,6 +98,30 @@ export default function App() {
     }
   };
 
+  const onRecommendToggle = async () => {
+    if (state.reachedDailyLimit && !state.recommendEnabled) {
+      showToast(
+        `Reached daily limit ${state.dailyLimit} greets/day. Please try again tomorrow.`,
+        "warning",
+      );
+      return;
+    }
+    const next = !state.recommendEnabled;
+    try {
+      const r = await chrome.runtime.sendMessage({
+        type: "TOGGLE_RECOMMEND",
+        enabled: next,
+      } satisfies PopupToSw);
+      if (r && r.type === "STATE") setState(r);
+      showToast(
+        next ? "Recommend-greet is enabled" : "Recommend-greet is disabled",
+        "info",
+      );
+    } catch (e) {
+      showToast(`Error: ${(e as Error).message}`, "error");
+    }
+  };
+
   return (
     <div className="relative w-[280px] bg-slate-900 text-white p-3 font-sans">
       <div
@@ -112,6 +138,13 @@ export default function App() {
         onClick={onToggle}
         disabled={toggling || state.reachedDailyLimit}
         limitReached={state.reachedDailyLimit}
+      />
+      <RecommendRow
+        recommendEnabled={state.recommendEnabled}
+        recommendGreeted={state.recommendGreeted}
+        dailyLimit={state.dailyLimit}
+        reachedDailyLimit={state.reachedDailyLimit}
+        onClick={onRecommendToggle}
       />
       <StatusGrid state={state} />
       <ErrorLine msg={state.lastErrorMsg} />
@@ -202,6 +235,64 @@ function StatusGrid({ state }: { state: SwToPopup }) {
       })}
     </div>
   );
+}
+
+// Second row: the recommend-greet flow. Independent of the main
+// chat-list reply loop. Shows a separate counter and button so the
+// user can opt into proactive greets on /web/chat/recommend.
+function RecommendRow({
+ recommendEnabled,
+ recommendGreeted,
+ dailyLimit,
+ reachedDailyLimit,
+ onClick,
+}: {
+ recommendEnabled: boolean;
+ recommendGreeted: number;
+ dailyLimit: number;
+ reachedDailyLimit: boolean;
+ onClick: () => void;
+}) {
+ const limitReached = reachedDailyLimit;
+ const label = limitReached ? "Limit reached" : recommendEnabled ? "Stop" : "Greet";
+ return (
+ <div
+ className={`flex items-center justify-between p-3 rounded-md mb-2 ${
+ limitReached
+ ? "bg-amber-900"
+ : recommendEnabled
+ ? "bg-sky-900"
+ : "bg-slate-800"
+ }`}
+ >
+ <div>
+ <div className="text-[13px] font-semibold">Recommend-greet</div>
+ <div
+ className={`text-[11px] ${
+ limitReached
+ ? "text-amber-300"
+ : recommendEnabled
+ ? "text-sky-300"
+ : "text-slate-400"
+ }`}
+ >
+ {recommendGreeted} / {dailyLimit} today
+ </div>
+ </div>
+ <ButtonComponent
+ onClick={onClick}
+ text={label}
+ classNameProps={
+ limitReached
+ ? "!bg-amber-700 !cursor-not-allowed hover:!bg-amber-700"
+ : recommendEnabled
+ ? "!bg-rose-600 hover:!bg-rose-500"
+ : "!bg-sky-600 hover:!bg-sky-500"
+ }
+ disabled={limitReached}
+ />
+ </div>
+ );
 }
 
 function ErrorLine({ msg }: { msg: string }) {

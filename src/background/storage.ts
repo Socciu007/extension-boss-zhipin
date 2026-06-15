@@ -43,6 +43,23 @@ export async function setEnabled(enabled: boolean): Promise<void> {
   await patch({ enabled })
 }
 
+// === Recommend (proactive greet) flow ===
+
+export async function setRecommendEnabled(enabled: boolean): Promise<void> {
+  await patch({ recommendEnabled: enabled })
+}
+
+export async function bumpRecommendGreeted(): Promise<void> {
+  const cur = await getAll()
+  // Reset the counter if we rolled over to a new day.
+  const greeted = cur.recommendEnabled
+    ? (cur.stats.date === todayLocal() ? cur.recommendGreeted + 1 : 1)
+    : 1
+  // (The count piggy-backs on stats.date for day roll-over, but we still
+  // store it as a separate field for clarity in the popup.)
+  await patch({ recommendGreeted: greeted })
+}
+
 // === Conversation (replied) cache with LRU prune ===
 
 export async function markReplied(conv: Conversation): Promise<void> {
@@ -86,8 +103,14 @@ export async function recordError(msg: string): Promise<void> {
 export async function resetDailyStatsIfStale(): Promise<Persisted> {
   const cur = await getAll()
   const stats = ensureFreshStats(cur.stats)
-  if (stats !== cur.stats) return patch({ stats })
-  return cur
+  // Also reset the recommend counter if day rolled over.
+  const patch: Partial<Persisted> = {}
+  if (stats !== cur.stats) patch.stats = stats
+  if (cur.recommendGreeted !== 0 && cur.stats.date !== todayLocal()) {
+    patch.recommendGreeted = 0
+  }
+  if (Object.keys(patch).length === 0) return cur
+  return (await import('./storage')).patch(patch) as any
 }
 
 function ensureFreshStats(s: Persisted['stats']): Persisted['stats'] {

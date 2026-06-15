@@ -93,6 +93,63 @@ const PROBES = {
     'a[class*="send"]',
     '[class*="send-btn"]',
   ],
+
+ // === Recommend-candidates page (/web/chat/recommend) ===
+ recommendCard: [
+ '.card-item',
+ '[class*="card-item"]',
+ '.geek-item-card',
+ 'li[data-geekid]',
+ 'li[data-uid]',
+ ],
+ recommendName: [
+ '.geek-name',
+ '.name',
+ '[class*="geek-name"]',
+ '[class*="name"]',
+ ],
+ recommendJob: [
+ '.source-job',
+ '.job',
+ '[class*="source-job"]',
+ '[class*="job"]',
+ ],
+ recommendSalary: [
+ '.salary',
+ '[class*="salary"]',
+ '.price',
+ '[class*="price"]',
+ ],
+ recommendYears: [
+ '[class*="year"]',
+ '.experience',
+ '[class*="experience"]',
+ ],
+ recommendEducation: [
+ '[class*="education"]',
+ '.edu',
+ '[class*="edu"]',
+ ],
+ recommendActive: [
+ '[class*="active"]',
+ '.status',
+ '[class*="status"]',
+ '.online',
+ ],
+ recommendGreetBtn: [
+ '.btn-greet',
+ 'button.btn-startchat',
+ 'button.op-btn',
+ 'a.op-btn',
+ 'button[class*="greet"]',
+ 'a[class*="greet"]',
+ ],
+ recommendConfirmBtn: [
+ '.dialog-container .btn-primary',
+ '.dialog-wrap .btn-primary',
+ '.confirm-btn',
+ 'button[class*="primary"]',
+ ],
 }
 
 async function findChatPage(targets) {
@@ -121,7 +178,88 @@ async function main() {
   const { Runtime, Page } = client
   await Promise.all([Runtime.enable(), Page.enable()])
 
+ // Map frameId -> executionContextId for iframe evaluation.
+ const contextByFrameId = new Map()
+ Runtime.executionContextCreated((e) => {
+ if (e.context.auxData && e.context.auxData.frameId) {
+ contextByFrameId.set(e.context.auxData.frameId, e.context.id)
+ }
+ })
+
+ // Wait for the page's main content to render before probing. The
+ // recommend page lazy-loads candidate cards, and a too-early probe
+ // would see an empty DOM and falsely report every selector as miss.
+ // We poll for at least one element matching the page-type-appropriate
+ // marker for up to 6 seconds.
+ const onRecommend = /\/web\/chat\/recommend/.test(target.url)
+ const onChatList = /\/web\/chat\/(\d+|index)/.test(target.url)
+ const waitSelector = onRecommend
+ ? '.card-item, [class*="card-item"], .geek-item, [class*="geek-item"]'
+ : onChatList
+ ? '.user-list, [role="listitem"]'
+ : null
+ if (waitSelector) {
+ const start = Date.now()
+ while (Date.now() - start < 10000) {
+ const r = await Runtime.evaluate({
+ expression: `document.querySelector(${JSON.stringify(waitSelector)}) !== null`,
+ returnByValue: true,
+ })
+ if (r.result.value === true) {
+ console.log(`[inspect-boss] content ready after ${Date.now() - start}ms`)
+ break
+ }
+ await new Promise((r) => setTimeout(r, 400))
+ }
+}
+
+
   if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true })
+
+  // The recommend page renders candidate cards inside an iframe named
+ // "recommendFrame". It is same-origin so we can read contentDocument
+ // directly. We just have to wait for the iframe to finish loading.
+ const DQ = String.fromCharCode(34); const SQ = String.fromCharCode(39); const isRecommend = target.url.includes("/web/chat/recommend")
+ console.log("[inspect-boss] isRecommend:", isRecommend, "target.url:", target.url)
+ if (isRecommend) {
+ const iframeExpr = "document.querySelector(" + DQ + "iframe[name=" + DQ + "recommendFrame" + DQ + "], iframe[src*=" + DQ + "/web/frame/recommend" + DQ + "]" + DQ + ")"
+ // Wait for iframe contentDocument to be ready (up to 10s).
+ await Runtime.evaluate({
+ expression: "new Promise(function(resolve){var f=" + iframeExpr + ";if(!f){resolve(false);return}var tries=0;var t=setInterval(function(){tries++;try{var d=f.contentDocument;if(d && d.readyState===" + DQ + "complete" + DQ + " && d.body && d.body.children.length>0){clearInterval(t);resolve(true)}}catch(e){}if(tries>50){clearInterval(t);resolve(false)}},200)})",
+ awaitPromise: true,
+ returnByValue: true,
+ }).catch(function(){return {result:{value:false}}})
+ // Now grab the iframe HTML.
+ let iframeHtml
+ try {
+ iframeHtml = await Runtime.evaluate({
+ expression: "(function(){var f=" + iframeExpr + ";if(!f) return null;try{return f.contentDocument.documentElement.outerHTML}catch(e){return null}})()",
+ returnByValue: true,
+ })
+ } catch (e) {
+ console.log('[inspect-boss] iframe evaluate threw:', String(e))
+ }
+ console.log('[inspect-boss] iframe evaluate returned:', iframeHtml ? 'present' : 'null/undefined')
+ console.log('[inspect-boss] iframeHtml.result.value present:', iframeHtml.result.value ? iframeHtml.result.value.length + ' bytes' : 'null')
+ if (iframeHtml.result.value) {
+ fs.writeFileSync(path.join(OUT_DIR, "iframe-recommend.html"), iframeHtml.result.value)
+ console.log("[inspect-boss] wrote iframe-recommend.html (" + iframeHtml.result.value.length + " bytes)")
+ } else {
+ console.log("[inspect-boss] could not read recommendFrame contents")
+ }
+ }
+ 
+ // Force-scroll so virtualized / lazy-loaded card markup is present.
+  await Runtime.evaluate({
+    expression: "window.scrollTo(0, document.body.scrollHeight)",
+    returnByValue: true,
+  }).catch(() => {})
+  await new Promise((r) => setTimeout(r, 1500))
+  await Runtime.evaluate({
+    expression: "window.scrollTo(0, 0)",
+    returnByValue: true,
+  }).catch(() => {})
+  await new Promise((r) => setTimeout(r, 500))
 
   // Dump full document HTML (truncated).
   const fullHtml = await Runtime.evaluate({
@@ -223,12 +361,31 @@ async function main() {
       for (const g of needConv) console.log(' -', g)
       console.log(' -> Open any chat row in BOSS, wait for the right panel to render, then re-run this script.')
     }
-    const structural = emptyGroups.filter((g) =>
-      ['chatListRoot', 'chatListItem', 'candidateName', 'jobTitle', 'snippet', 'timestamp', 'unreadBadge'].includes(g),
-    )
+    // Detect which page we are on by inspecting one DOM marker.
+ const onRecommendPage = await Runtime.evaluate({
+ expression: 'location.pathname.includes("/web/chat/recommend")',
+ returnByValue: true,
+ }).then((r) => Boolean(r.result.value)).catch(() => false)
+ const onIndexPage = await Runtime.evaluate({
+ expression: 'location.pathname.includes("/web/chat/index") || //web/chat/(d+)/.test(location.pathname)',
+ returnByValue: true,
+ }).then((r) => Boolean(r.result.value)).catch(() => false)
+ const structural = emptyGroups.filter((g) =>
+ ['chatListRoot', 'chatListItem', 'candidateName', 'jobTitle', 'snippet', 'timestamp', 'unreadBadge'].includes(g),
+ )
     if (structural.length) {
-      console.log(' These groups missing on the LIST page suggest the URL is wrong, the chat list is in shadow DOM, or BOSS rolled a new build:')
-      for (const g of structural) console.log(' -', g)
+      if (onRecommendPage) {
+        console.log(' NOTE: Chat-list selectors are EXPECTED to miss on /web/chat/recommend. Only the recommend* groups matter here.')
+      } else {
+        console.log(' These groups missing on the LIST page suggest the URL is wrong, the chat list is in shadow DOM, or BOSS rolled a new build:')
+        for (const g of structural) console.log(' -', g)
+      }
+    }
+    // Recommend-specific diagnostic
+    const recommendMiss = emptyGroups.filter((g) => g.startsWith('recommend'))
+    if (recommendMiss.length) {
+      console.log(' Recommend selectors missing — verify the DOM structure of /web/chat/recommend:')
+      for (const g of recommendMiss) console.log(' -', g)
     }
   }
 
