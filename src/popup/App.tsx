@@ -122,6 +122,23 @@ export default function App() {
     }
   };
 
+  const [resetting, setResetting] = useState(false);
+  const onResetToday = async () => {
+    if (resetting) return;
+    setResetting(true);
+    try {
+      const r = await chrome.runtime.sendMessage({
+        type: "RESET_STATS",
+      } satisfies PopupToSw);
+      if (r && r.type === "STATE") setState(r);
+      showToast("Today's counters have been reset", "success");
+    } catch (e) {
+      showToast(`Error: ${(e as Error).message}`, "error");
+    } finally {
+      setResetting(false);
+    }
+  };
+
   return (
     <div className="relative w-[280px] bg-slate-900 text-white p-3 font-sans">
       <div
@@ -147,7 +164,12 @@ export default function App() {
         onClick={onRecommendToggle}
       />
       <StatusGrid state={state} />
-      <ErrorLine msg={state.lastErrorMsg} />
+      <ErrorLine
+        msg={state.lastErrorMsg}
+        limitReached={state.reachedDailyLimit}
+        onReset={onResetToday}
+        resetting={resetting}
+      />
     </div>
   );
 }
@@ -295,11 +317,36 @@ function RecommendRow({
  );
 }
 
-function ErrorLine({ msg }: { msg: string }) {
-  if (!msg) return <div className="text-[11px] min-h-[14px]">&nbsp;</div>;
+function ErrorLine({
+  msg,
+  limitReached,
+  onReset,
+  resetting,
+}: {
+  msg: string
+  limitReached: boolean
+  onReset: () => void
+  resetting: boolean
+}) {
+  if (!msg && !limitReached) {
+    return <div className="text-[11px] min-h-[14px]">&nbsp;</div>
+  }
   return (
-    <div className="text-[11px] text-rose-400 min-h-[14px]">
-      <span dangerouslySetInnerHTML={{ __html: "&#9888;&#65039;" }} /> {msg}
+    <div className="text-[11px] text-rose-400 min-h-[14px] flex items-center gap-2 flex-wrap">
+      {msg && (
+        <span>
+          <span dangerouslySetInnerHTML={{ __html: "&#9888;&#65039;" }} /> {msg}
+        </span>
+      )}
+      {limitReached && (
+        <button
+          onClick={onReset}
+          disabled={resetting}
+          className="px-2 py-0.5 rounded bg-amber-700 hover:bg-amber-600 text-white text-[10px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {resetting ? 'Resetting…' : 'Reset today'}
+        </button>
+      )}
     </div>
-  );
+  )
 }

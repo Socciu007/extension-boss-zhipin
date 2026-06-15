@@ -100,6 +100,20 @@ export async function recordError(msg: string): Promise<void> {
   await patch({ stats: { ...stats, errors: stats.errors + 1, lastErrorMsg: msg.slice(0, 200) } })
 }
 
+// Force-reset the daily counters (sent, errors, lastErrorMsg) and the
+// recommend-greet counter. Leaves config, enabled flags, conversations
+// cache, and isRunning flag untouched. Useful for the "I've hit the
+// limit but want to keep going" case.
+export async function resetDailyStats(): Promise<Persisted> {
+ const cur = await getAll()
+ const today = todayLocal()
+ const p: Partial<Persisted> = {
+ stats: { date: today, sent: 0, errors: 0, lastErrorMsg: "" },
+ }
+ if (cur.recommendGreeted !== 0) p.recommendGreeted = 0
+ return patch(p) as any
+}
+
 export async function resetDailyStatsIfStale(): Promise<Persisted> {
   const cur = await getAll()
   const stats = ensureFreshStats(cur.stats)

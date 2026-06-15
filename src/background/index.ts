@@ -62,6 +62,12 @@ async function handlePopupMessage(msg: PopupToSw): Promise<SwToPopup> {
     case 'CLEAR_REPLIED':
       await storage.clearReplied()
       return stateNow()
+    case 'RESET_STATS':
+      // Force-clear today's sent/errors counters and the recommend-greet
+      // counter. The popup calls this when the user dismisses the
+      // "Daily limit reached" warning.
+      await storage.resetDailyStats()
+      return stateNow()
     case 'RUN_ONCE':
       // Fire-and-forget; the popup polls GET_STATE for result.
       loop.runOnce().catch((e) => storage.recordError(String(e)))

@@ -51,6 +51,7 @@ type PopupToSw =
  | { type: 'TOGGLE_RECOMMEND'; enabled: boolean } // start/stop recommend-greet loop
  | { type: 'UPDATE_CONFIG'; config: Partial<AppConfig> }
  | { type: 'CLEAR_REPLIED' }
+ | { type: 'RESET_STATS' } // force-clear today's counters
  | { type: 'RUN_ONCE' } // debug: tick ngay
 
 type SwToPopup = {
