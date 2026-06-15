@@ -35,7 +35,7 @@ const DEFAULT_CONFIG: AppConfig = {
   model: 'gemini-2.5-flash',
   throttleMinMs: 2000,
   throttleMaxMs: 5000,
-  dailyLimit: 6,
+  dailyLimit: 100,
   systemPrompt: '',
 }
 
