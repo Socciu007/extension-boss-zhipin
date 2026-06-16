@@ -218,16 +218,67 @@ export const SEL = {
     '.name',
   ],
 
-  // Online / active status (e.g. "在线", "刚刚活跃", "刚刚活跃").
-  // Empty <span class="active-text"></span> if inactive.
-  recommendActive: [
-    '.name-wrap .active-text',
-    '.active-text',
-    '.name-wrap [class*="active"]',
+  // === Per-card content fields (verified 2026-06-16 from iframe HTML) ===
+  //
+  // A card looks like:
+  // <div class="card-inner common-wrap css-type-1">
+  //   <div class="avatar-wrap"><img class="avatar"></div>
+  //   <div class="salary-wrap"><span>14-16K</span></div>
+  //   <div class="col-2">
+  //     <div class="row name-wrap">
+  //       <span class="name">李斌</span>
+  //       <img class="online-marker">  ← only when online
+  //     </div>
+  //     <div class="row">
+  //       <div class="base-info">
+  //         <span>28岁</span> <span>8年</span> <span>本科</span> <span>离职-随时到岗</span>
+  //       </div>
+  //     </div>
+  //     <div class="row expect-wrap">
+  //       <span class="label">期望</span>
+  //       <span class="content">上海 · Java</span>
+  //     </div>
+  //     <div class="row geek-desc">
+  //       <span class="label">优势</span>
+  //       <span class="content">1.具备扎实的 Java 基础...</span>
+  //     </div>
+  //     <div class="row tags">
+  //       <div class="tags-wrap">
+  //         <span class="tag-item">211院校</span>
+  //         <span class="tag-item">SQL</span>
+  //         ...
+  //       </div>
+  //     </div>
+  //   </div>
+  //   <div class="col-3">
+  //     <div class="time-placeholder-wrap">
+  //       <div class="content">
+  //         <div class="join-text-wrap">2024.03 - 2026.03</div>
+  //         ...
+  //       </div>
+  //     </div>
+  //     <div class="work-exps">
+  //       <div class="timeline-item">
+  //         <div class="join-text-wrap time">2024.03 - 2026.03</div>
+  //         <div class="join-text-wrap content">锐进软件 · Java</div>
+  //       </div>
+  //       ...
+  //     </div>
+  //   </div>
+  // </div>
+
+  // Salary band (e.g. "14-16K", "10-13K").
+  recommendSalary: [
+    '.salary-wrap span',
+    '.salary',
   ],
 
-  // Years of experience (e.g. "7年"). Sits in the second <span> of
-  // .base-info after the age <span>. We extract the 2nd <span>.
+  // Age (e.g. "28岁"). First <span> in .base-info.
+  recommendAge: [
+    '.base-info span:nth-of-type(1)',
+  ],
+
+  // Years of experience (e.g. "7年").
   recommendYears: [
     '.base-info span:nth-of-type(2)',
   ],
@@ -237,10 +288,65 @@ export const SEL = {
     '.base-info span:nth-of-type(3)',
   ],
 
-  // "期望" (expectation) row — contains expected salary, location, job.
+  // Job status — 4th <span> in .base-info.
+  recommendStatus: [
+    '.base-info span:nth-of-type(4)',
+  ],
+
+  // "期望" (expectation) row — expected location + job joined by "·".
   recommendExpect: [
     '.expect-wrap .content',
     '.expect-wrap',
+  ],
+
+  // Expected location only (first segment in the expect text, e.g. "上海").
+  recommendExpectLocation: [
+    '.expect-wrap .content .join-text-wrap span:nth-of-type(1)',
+  ],
+
+  // Expected job (e.g. "Java").
+  recommendExpectJob: [
+    '.expect-wrap .content .join-text-wrap span:nth-of-type(2)',
+  ],
+
+  // "优势" (highlights) — long free-text paragraph describing the candidate.
+  recommendDesc: [
+    '.geek-desc .content',
+    '.geek-desc',
+  ],
+
+  // Tag chips below the description.
+  recommendTags: [
+    '.tags-wrap .tag-item',
+    '.tag-item',
+  ],
+
+  // Work-experience timeline items.
+  recommendWorkExps: [
+    '.work-exps .timeline-item',
+  ],
+
+  // One work-experience time range.
+  recommendWorkExpTime: [
+    '.work-exps .timeline-item .time .join-text-wrap',
+    '.work-exps .timeline-item .time',
+  ],
+
+  // One work-experience "company · job" line.
+  recommendWorkExpLine: [
+    '.work-exps .timeline-item .content .join-text-wrap',
+    '.work-exps .timeline-item .content',
+  ],
+
+  // Date-range stack in the right column (without the company/job).
+  recommendTimeRanges: [
+    '.time-placeholder-wrap .content .join-text-wrap',
+  ],
+
+  // Avatar image element.
+  recommendAvatar: [
+    '.avatar-wrap .avatar',
+    'img.avatar',
   ],
 
   // "打招呼" (greet) button on a single card. Verified: <button class="btn btn-greet">.

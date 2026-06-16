@@ -143,12 +143,6 @@ export async function runOnce(): Promise<void> {
 // Independent of the chat-list loop (runOnce): it has its own toggle
 // (recommendEnabled) and its own counter (recommendGreeted).
 
-async function findRecommendTab(): Promise<number | null> {
-  const tabs = await chrome.tabs.query({ url: "https://www.zhipin.com/web/chat/recommend*" })
-  if (tabs.length === 0) return null
-  return tabs[0].id ?? null
-}
-
 export async function runRecommendGreetOnce(): Promise<void> {
   if (!(await storage.tryAcquireRunLock())) return
   try {
@@ -164,20 +158,20 @@ export async function runRecommendGreetOnce(): Promise<void> {
       }
       return
     }
-    const tabId = await findRecommendTab()
+    const tabId = await findZhipinTab()
     if (!tabId) return
     // Click 推荐牛人 tab first so the iframe with candidate cards mounts.
     const tabRes = await sendToTab(tabId, { type: "CLICK_TAB", tab: "recommend" })
     if (!tabRes || tabRes.type !== "CLICKED_TAB" || !tabRes.ok) {
-      await storage.recordError(
-        'Failed to switch to 推荐牛人 tab: ' + ((tabRes as any)?.error ?? 'unknown'),
-      )
+      await storage.setEnabled(false)
+      await storage.recordError('Please try to load the boss zhipin page again before enabling recommend-greet.')
       return
     }
     const list = await sendToTab(tabId, { type: "SCRAPE_RECOMMENDED" })
     if (!list || list.type !== "RECOMMENDED_LIST" || list.candidates.length === 0) return
     const target = list.candidates[0]
     const greet = await sendToTab(tabId, { type: "GREET_CANDIDATE", cardId: target.id })
+    console.log('greet', greet)
     if (!greet || greet.type !== "GREETED" || !greet.ok) {
       const err = greet && greet.type === "GREETED" ? greet.error : "unknown"
       await storage.recordError('recommend-greet failed: ' + (err ?? 'unknown'))

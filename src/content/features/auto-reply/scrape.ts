@@ -98,26 +98,60 @@ export async function clickTab(
 // "打招呼" button. We don't filter by status — the SW loop will skip
 // cards whose buttons are disabled (e.g. already-greeted today).
 export function findRecommended(): RecommendedCandidate[] {
-  const cards = $$(SEL.recommendCard)
+  const recommendFrame = $(['iframe[name="recommendFrame"]']) as HTMLIFrameElement | null
+  if (!recommendFrame) return []
+  const recommendDoc = recommendFrame.contentDocument || recommendFrame.contentWindow?.document
+  if (!recommendDoc) return []
+  const cards = $$(SEL.recommendCard, recommendDoc)
   console.log('[auto-reply/scrape] recommend cards found:', cards.length)
 
   return cards.map((card, i) => {
-    const id =
-      (card as HTMLElement).getAttribute('data-geekid') ??
-      (card as HTMLElement).getAttribute('data-uid') ??
-      (card as HTMLElement).getAttribute('data-id') ??
-      `card-${i}-${(card.textContent ?? '').slice(0, 16).replace(/\s+/g, '')}`
-
-    // Helper that finds a child by selector list and returns trimmed text.
+    // Text helper (scoped to the card).
     const txt = (sel: readonly string[]): string =>
       $(sel, card)?.textContent?.trim() ?? ''
+
+    // Array helper: returns array of trimmed text for each match.
+    const txtAll = (sel: readonly string[]): string[] => {
+      const list = $$(sel, card)
+      return list.map((el) => (el.textContent ?? '').trim()).filter(Boolean)
+    }
+    const id =
+      card?.querySelector('.card-inner')?.getAttribute('data-geekid') ??
+      card?.querySelector('.card-inner')?.getAttribute('data-geek') ??
+      card?.querySelector('.card-inner')?.getAttribute('data-id') ??
+      `card-${i}-${(txt(SEL.recommendName) ?? '').slice(0, 16).replace(/\s+/g, '')}`
+
+
+    // Avatar: prefer src attribute.
+    const avatarEl = $(SEL.recommendAvatar, card) as HTMLImageElement | null
+    const avatarUrl = avatarEl?.getAttribute('src') ?? ''
+
+    // Tags: one or more .tag-item elements.
+    const tags = txtAll(SEL.recommendTags)
+
+    // Work experience: each .timeline-item has a time range + a
+    // "company · job" line. Combine them into one readable string.
+    const workExps = $$(SEL.recommendWorkExps, card).map((item) => {
+      const time = (item.querySelector('.time .join-text-wrap')?.textContent ?? '').trim()
+      const line = (item.querySelector('.content .join-text-wrap')?.textContent ?? '').trim()
+      return [time, line].filter(Boolean).join(' / ')
+    }).filter(Boolean)
 
     return {
       id,
       name: txt(SEL.recommendName),
+      avatarUrl,
+      age: txt(SEL.recommendAge),
       years: txt(SEL.recommendYears),
       education: txt(SEL.recommendEducation),
-      activeStatus: txt(SEL.recommendActive),
+      status: txt(SEL.recommendStatus),
+      salary: txt(SEL.recommendSalary),
+      expect: txt(SEL.recommendExpect),
+      expectLocation: txt(SEL.recommendExpectLocation),
+      expectJob: txt(SEL.recommendExpectJob),
+      desc: txt(SEL.recommendDesc),
+      tags,
+      workExps,
     }
   })
 }
@@ -151,12 +185,17 @@ export async function greetCandidate(cardId: string): Promise<{ ok: boolean; err
 }
 
 function findCardById(cardId: string): Element | null {
-  const cards = $$(SEL.recommendCard)
-  for (const c of cards) {
+  const recommendFrame = $(['iframe[name="recommendFrame"]']) as HTMLIFrameElement | null
+  if (!recommendFrame) return null
+  const recommendDoc = recommendFrame.contentDocument || recommendFrame.contentWindow?.document
+  if (!recommendDoc) return null
+  const cards = $$(SEL.recommendCard, recommendDoc)
+  for (const [i, c] of cards.entries()) {
     const id =
-      (c as HTMLElement).getAttribute('data-geekid') ??
-      (c as HTMLElement).getAttribute('data-uid') ??
-      (c as HTMLElement).getAttribute('data-id')
+      c?.querySelector('.card-inner')?.getAttribute('data-geekid') ??
+      c?.querySelector('.card-inner')?.getAttribute('data-geek') ??
+      c?.querySelector('.card-inner')?.getAttribute('data-id') ??
+      `card-${i}-${($(SEL.recommendName, c)?.textContent?.trim() ?? '').slice(0, 16).replace(/\s+/g, '')}`
     if (id === cardId) return c
   }
   return null
