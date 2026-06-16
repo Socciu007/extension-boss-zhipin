@@ -10,9 +10,7 @@ import { SEL, $$, $ } from './dom'
 const URL_MATCH = /^\/web\/chat(\/|$)/
 
 function isTargetPage(): boolean {
-  const ok = URL_MATCH.test(location.pathname) && location.host.endsWith('zhipin.com')
- console.log('[auto-reply] isTargetPage?', ok, location.pathname, location.host)
- return ok
+  return URL_MATCH.test(location.pathname) && location.host.endsWith('zhipin.com')
 }
 
 function bootstrap(): void {
@@ -54,52 +52,43 @@ chrome.runtime.onMessage.addListener((msg: SwToContent, _sender, sendResponse) =
           return
         }
 
-        case 'GREET_CANDIDATE': {
-          scrape
-            .greetCandidate(msg.cardId)
-            .then((res) => {
-              reply({ type: 'GREETED', cardId: msg.cardId, ok: res.ok, error: res.error })
-              sendResponse({ type: 'GREETED', cardId: msg.cardId, ok: res.ok, error: res.error })
-            })
-            .catch((e: unknown) => {
-              const err = String(e)
-              reply({ type: 'GREETED', cardId: msg.cardId, ok: false, error: err })
-              sendResponse({ type: 'GREETED', cardId: msg.cardId, ok: false, error: err })
-            })
+        case 'CLICK_TAB': {
+          const res = await scrape.clickTab(msg.tab)
+          reply({ type: 'CLICKED_TAB', tab: msg.tab, ok: res.ok, error: res.error })
+          sendResponse({ type: 'CLICKED_TAB', tab: msg.tab, ok: res.ok, error: res.error })
           return
         }
 
-        case 'OPEN_CONV':
-          scrape
-            .openConv(msg.convId)
-            .then((pane) => {
-              reply({ type: 'CONV_OPENED', convId: msg.convId })
-              sendResponse({ type: 'CONV_OPENED', convId: msg.convId, hasPane: !!pane })
-            })
-            .catch((e) => sendResponse({ ok: false, error: String(e) }))
+        case 'GREET_CANDIDATE': {
+          const res = await scrape.greetCandidate(msg.cardId)
+          reply({ type: 'GREETED', cardId: msg.cardId, ok: res.ok, error: res.error })
+          sendResponse({ type: 'GREETED', cardId: msg.cardId, ok: res.ok, error: res.error })
           return
+        }
+
+        case 'OPEN_CONV': {
+          const pane = await scrape.openConv(msg.convId)
+          reply({ type: 'CONV_OPENED', convId: msg.convId })
+          sendResponse({ type: 'CONV_OPENED', convId: msg.convId, hasPane: !!pane })
+          return
+        }
 
         case 'READ_LAST_MESSAGE': {
-          // Re-find pane: SW calls this AFTER OPEN_CONV succeeded.
-          const pane = $(SEL.messagePane) as HTMLElement | null
-          const text = pane?.textContent?.trim() ? await scrape.readLastCandidateMessage(pane) : ''
+          const pane = document.querySelector(SEL.messagePane[0]) as HTMLElement | null
+          const text = pane
+            ? await scrape.readLastCandidateMessage(pane)
+            : ''
           reply({ type: 'LAST_MESSAGE', convId: msg.convId, text })
           sendResponse({ type: 'LAST_MESSAGE', convId: msg.convId, text })
           return
         }
 
-        case 'SEND_REPLY':
-          act
-            .typeAndSend(msg.text)
-            .then(() => {
-              reply({ type: 'REPLY_SENT', convId: msg.convId, ok: true })
-              sendResponse({ type: 'REPLY_SENT', convId: msg.convId, ok: true })
-            })
-            .catch((e) => {
-              reply({ type: 'REPLY_SENT', convId: msg.convId, ok: false, error: String(e) })
-              sendResponse({ type: 'REPLY_SENT', convId: msg.convId, ok: false, error: String(e) })
-            })
+        case 'SEND_REPLY': {
+          await act.typeAndSend(msg.text)
+          reply({ type: 'REPLY_SENT', convId: msg.convId, ok: true })
+          sendResponse({ type: 'REPLY_SENT', convId: msg.convId, ok: true })
           return
+        }
 
         case 'TEST_SELECTORS': {
           const results: SelectorTestResult[] = Object.entries(SEL).map(([name, list]) => {

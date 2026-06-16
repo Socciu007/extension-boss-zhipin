@@ -39,14 +39,30 @@ export async function updateConfig(c: Partial<AppConfig>): Promise<Persisted> {
   return patch({ config: { ...cur.config, ...c } })
 }
 
+// === Mutual exclusion ===
+//
+// The chat-list reply loop (enabled) and the recommend-greet loop
+// (recommendEnabled) cannot run at the same time. They both drive the
+// same SW tick scheduling, share a daily limit, and would otherwise
+// race on the GEMINI rate limit + the run lock. We enforce that
+// here: turning one ON forces the other OFF.
+//
+// The two counters (sent and recommendGreeted) are still tracked
+// independently so the popup can show usage. The daily limit
+// applies to the sum of both.
+
+// === Chat-list reply flow ===
+
 export async function setEnabled(enabled: boolean): Promise<void> {
-  await patch({ enabled })
+  // Mutual exclusion: enabling chat-list reply forces recommend-greet off.
+  await patch(enabled ? { enabled: true, recommendEnabled: false } : { enabled: false })
 }
 
 // === Recommend (proactive greet) flow ===
 
 export async function setRecommendEnabled(enabled: boolean): Promise<void> {
-  await patch({ recommendEnabled: enabled })
+  // Mirror of setEnabled: enabling recommend forces chat-list reply off.
+  await patch(enabled ? { recommendEnabled: true, enabled: false } : { recommendEnabled: false })
 }
 
 export async function bumpRecommendGreeted(): Promise<void> {
@@ -100,18 +116,24 @@ export async function recordError(msg: string): Promise<void> {
   await patch({ stats: { ...stats, errors: stats.errors + 1, lastErrorMsg: msg.slice(0, 200) } })
 }
 
+export async function clearError(): Promise<void> {
+  const cur = await getAll()
+  const stats = ensureFreshStats(cur.stats)
+  await patch({ stats: { ...stats, errors: 0, lastErrorMsg: '' } })
+}
+
 // Force-reset the daily counters (sent, errors, lastErrorMsg) and the
 // recommend-greet counter. Leaves config, enabled flags, conversations
 // cache, and isRunning flag untouched. Useful for the "I've hit the
 // limit but want to keep going" case.
 export async function resetDailyStats(): Promise<Persisted> {
- const cur = await getAll()
- const today = todayLocal()
- const p: Partial<Persisted> = {
- stats: { date: today, sent: 0, errors: 0, lastErrorMsg: "" },
- }
- if (cur.recommendGreeted !== 0) p.recommendGreeted = 0
- return patch(p) as any
+  const cur = await getAll()
+  const today = todayLocal()
+  const p: Partial<Persisted> = {
+    stats: { date: today, sent: 0, errors: 0, lastErrorMsg: "" },
+  }
+  if (cur.recommendGreeted !== 0) p.recommendGreeted = 0
+  return patch(p) as any
 }
 
 export async function resetDailyStatsIfStale(): Promise<Persisted> {

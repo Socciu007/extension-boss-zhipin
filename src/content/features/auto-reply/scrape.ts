@@ -64,6 +64,34 @@ function collectRows(scope: ParentNode, provided?: Element[]): Conversation[] {
 }
 
 // === Recommended-candidates page (/web/chat/recommend) ===
+
+// Click the left-sidebar nav tab that corresponds to the given flow. BOSS
+// is a single-page app; switching tabs re-renders the right panel (or the
+// iframe, for recommend) without a full page reload. We click the <a>
+// inside the relevant <dl> wrapper, then wait for the destination view's
+// root element to appear.
+export async function clickTab(
+  tab: 'chat' | 'recommend',
+): Promise<{ ok: boolean; error?: string }> {
+  const sel = tab === 'chat' ? SEL.chatTab : SEL.recommendTab
+  const link = $(sel) as HTMLAnchorElement | null
+  if (!link) return { ok: false, error: `${tab} tab not found` }
+  if (link.classList.contains('router-link-active') || link.classList.contains('router-link-exact-active')) {
+    // Already on this tab; nothing to do.
+    return { ok: true }
+  }
+  link.click()
+  // Wait for the destination view's root to mount. For chat we look for
+  // .user-list; for recommend we look for the recommendFrame iframe (the
+  // main page can mount immediately, the iframe is what we actually want).
+  const waitForSel = tab === 'chat'
+    ? ['.user-list', '[role="listitem"]']
+    : ['iframe[name="recommendFrame"]']
+  const arrived = await waitFor(waitForSel, { timeout: 5000 }).then(Boolean).catch(() => false)
+  if (!arrived) return { ok: false, error: `tab ${tab} clicked but view did not mount in 5s` }
+  return { ok: true }
+}
+
 //
 // Returns every candidate card on the page. Each card is a top-level
 // <div class="card-item"> with name, salary band, job, and an inline

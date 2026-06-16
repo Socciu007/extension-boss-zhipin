@@ -12,6 +12,7 @@ type SwToContent =
  | { type: 'READ_LAST_MESSAGE'; convId: string }
  | { type: 'SEND_REPLY'; convId: string; text: string }
  | { type: 'GREET_CANDIDATE'; cardId: string } // click "打招呼" on recommend page
+ | { type: 'CLICK_TAB'; tab: 'chat' | 'recommend' } // click 沟通 or 推荐牛人 tab
  | { type: 'TEST_SELECTORS' }
 
 type ContentToSw =
@@ -23,6 +24,7 @@ type ContentToSw =
  | { type: 'LAST_MESSAGE'; convId: string; text: string }
  | { type: 'REPLY_SENT'; convId: string; ok: boolean; error?: string }
  | { type: 'GREETED'; cardId: string; ok: boolean; error?: string }
+ | { type: 'CLICKED_TAB'; tab: 'chat' | 'recommend'; ok: boolean; error?: string }
  | { type: 'SELECTOR_TEST_RESULT'; results: SelectorTestResult[] }
 
 type SelectorTestResult = {

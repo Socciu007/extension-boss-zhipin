@@ -20,7 +20,7 @@ type DailyStats = {
   date: string // "YYYY-MM-DD" local
   sent: number
   errors: number
-  lastErrorMsg: string // rỗng nếu OK
+  lastErrorMsg: string // empty if OK
 }
 
 type Persisted = {

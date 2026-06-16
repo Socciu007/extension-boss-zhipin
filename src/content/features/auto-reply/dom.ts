@@ -143,6 +143,42 @@ export const SEL = {
     'button[type="button"][class*="btn"]',
   ],
 
+  // === Left-sidebar nav tabs ===
+  //
+  // Two tabs that the loop can drive before scraping:
+  // - 沟通 (chat list) — auto-reply flow
+  // - 推荐牛人 (recommend candidates) — greet flow
+  //
+  // Verified 2026-06-12: the tabs are rendered as <a> inside a <dl> wrapper,
+  // e.g. <dl class="menu-chat"><dt><a href="/web/chat/index" ka="menu-im" ...>...</a></dt></dl>
+  // <dl class="menu-recommend"><dt><a ka="menu-geek-recommend" ...>...</a></dt></dl>
+
+  // 沟通 tab (chat list) — clicking navigates to /web/chat/index.
+  chatTab: [
+    'a[href="/web/chat/index"]',
+    'a[ka="menu-im"]',
+    '.menu-chat a',
+    '.menu-chat dt a',
+    '.left-menu a[href*="/web/chat/index"]',
+  ],
+
+  // 推荐牛人 tab (recommend candidates) — clicking navigates to /web/chat/recommend.
+  recommendTab: [
+    'a[ka="menu-geek-recommend"]',
+    '.menu-recommend a',
+    '.menu-recommend dt a',
+    '.left-menu a[href*="/web/chat/recommend"]',
+  ],
+
+  // After click on recommend tab, BOSS may show the recommend page but the
+  // candidate cards are still loaded inside the recommendFrame iframe. This
+  // marker lets the content script wait until the iframe is mounted before
+  // proceeding with scrape.
+  recommendIframe: [
+    'iframe[name="recommendFrame"]',
+    'iframe[src*="/web/frame/recommend"]',
+  ],
+
   // === Recommended-candidates page (/web/chat/recommend) ===
   //
   // Cards live inside an iframe named "recommendFrame" with src

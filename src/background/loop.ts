@@ -29,8 +29,7 @@ function sendToTab<T extends SwToContent>(tabId: number, msg: T): Promise<Conten
 // in the replied cache.
 async function pickOneUnreplied(tabId: number): Promise<Conversation | null> {
   const reply = await sendToTab(tabId, { type: 'SCRAPE_UNREAD' })
-  console.log('reply', reply)
-  if (!reply || reply.type !== 'UNREAD_LIST') {
+  if (!reply || reply.type !== 'UNREAD_LIST' || !reply.conversations || reply.conversations.length === 0) {
     await storage.setEnabled(false)
     await storage.recordError('Please try to load the chat page again before enabling auto-reply.')
     return null
@@ -66,6 +65,16 @@ export async function runOnce(): Promise<void> {
 
     const tabId = await findZhipinTab()
     if (!tabId) return
+
+    // Click 沟通 tab first so the chat list is mounted before we scrape.
+    // No-op if the tab is already active.
+    const tabRes = await sendToTab(tabId, { type: 'CLICK_TAB', tab: 'chat' })
+    console.log('tabRes', tabRes)
+    if (!tabRes || tabRes.type !== 'CLICKED_TAB' || !tabRes.ok) {
+      await storage.setEnabled(false)
+      await storage.recordError('Please try to load the chat page again before enabling auto-reply.')
+      return
+    }
 
     const conv = await pickOneUnreplied(tabId)
     console.log('conv', conv)
@@ -157,6 +166,14 @@ export async function runRecommendGreetOnce(): Promise<void> {
     }
     const tabId = await findRecommendTab()
     if (!tabId) return
+    // Click 推荐牛人 tab first so the iframe with candidate cards mounts.
+    const tabRes = await sendToTab(tabId, { type: "CLICK_TAB", tab: "recommend" })
+    if (!tabRes || tabRes.type !== "CLICKED_TAB" || !tabRes.ok) {
+      await storage.recordError(
+        'Failed to switch to 推荐牛人 tab: ' + ((tabRes as any)?.error ?? 'unknown'),
+      )
+      return
+    }
     const list = await sendToTab(tabId, { type: "SCRAPE_RECOMMENDED" })
     if (!list || list.type !== "RECOMMENDED_LIST" || list.candidates.length === 0) return
     const target = list.candidates[0]

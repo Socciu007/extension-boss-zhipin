@@ -46,6 +46,9 @@ async function handlePopupMessage(msg: PopupToSw): Promise<SwToPopup> {
       if (msg.enabled) {
         // Fire runOnce immediately on click — no alarm / no kickLoopSoon.
         loop.runOnce().catch((e) => storage.recordError(String(e)))
+      } else {
+        // Clear the error message when disabling auto-reply
+        await storage.clearError()
       }
       return stateNow()
     case 'UPDATE_CONFIG':

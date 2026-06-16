@@ -70,7 +70,7 @@ export default function App() {
     };
   }, []);
 
-  const onToggle = async () => {
+  const handleAutoChat = async () => {
     if (toggling) return;
     if (state.reachedDailyLimit && !state.enabled) {
       showToast(
@@ -87,10 +87,7 @@ export default function App() {
         enabled: next,
       } satisfies PopupToSw);
       if (r && r.type === "STATE") setState(r);
-      showToast(
-        next ? "Auto-reply is enabled" : "Auto-reply is disabled",
-        "info"
-      );
+      showToast(next ? "Auto-reply is enabled" : "Auto-reply is disabled", "info");
     } catch (e) {
       showToast(`Error: ${(e as Error).message}`, "error");
     } finally {
@@ -98,11 +95,11 @@ export default function App() {
     }
   };
 
-  const onRecommendToggle = async () => {
+  const handleSeenGreet = async () => {
     if (state.reachedDailyLimit && !state.recommendEnabled) {
       showToast(
         `Reached daily limit ${state.dailyLimit} greets/day. Please try again tomorrow.`,
-        "warning",
+        "warning"
       );
       return;
     }
@@ -115,7 +112,7 @@ export default function App() {
       if (r && r.type === "STATE") setState(r);
       showToast(
         next ? "Recommend-greet is enabled" : "Recommend-greet is disabled",
-        "info",
+        "info"
       );
     } catch (e) {
       showToast(`Error: ${(e as Error).message}`, "error");
@@ -123,7 +120,7 @@ export default function App() {
   };
 
   const [resetting, setResetting] = useState(false);
-  const onResetToday = async () => {
+  const handleReset = async () => {
     if (resetting) return;
     setResetting(true);
     try {
@@ -152,22 +149,24 @@ export default function App() {
 
       <ToggleRow
         enabled={state.enabled}
-        onClick={onToggle}
-        disabled={toggling || state.reachedDailyLimit}
+        onClick={handleAutoChat}
+        disabled={toggling || state.reachedDailyLimit || state.recommendEnabled}
         limitReached={state.reachedDailyLimit}
+        otherActive={state.recommendEnabled}
       />
       <RecommendRow
         recommendEnabled={state.recommendEnabled}
         recommendGreeted={state.recommendGreeted}
         dailyLimit={state.dailyLimit}
         reachedDailyLimit={state.reachedDailyLimit}
-        onClick={onRecommendToggle}
+        onClick={handleSeenGreet}
+        otherActive={state.enabled}
       />
       <StatusGrid state={state} />
       <ErrorLine
         msg={state.lastErrorMsg}
         limitReached={state.reachedDailyLimit}
-        onReset={onResetToday}
+        onReset={handleReset}
         resetting={resetting}
       />
     </div>
@@ -179,11 +178,13 @@ function ToggleRow({
   onClick,
   disabled,
   limitReached,
+  otherActive,
 }: {
   enabled: boolean;
   onClick: () => void;
   disabled: boolean;
   limitReached: boolean;
+  otherActive: boolean;
 }) {
   const buttonLabel = limitReached ? "Disable" : enabled ? "Disable" : "Enable";
   return (
@@ -201,10 +202,17 @@ function ToggleRow({
         <div
           className={`text-[11px] ${
             limitReached
-              && "text-amber-300"
+              ? "text-amber-300"
+              : otherActive
+              ? "text-slate-400 italic"
+              : ""
           }`}
         >
-          {limitReached && "Reached daily limit"}
+          {limitReached
+            ? "Reached daily limit"
+            : otherActive
+            ? "Another mode is active"
+            : ""}
         </div>
       </div>
       <ButtonComponent
@@ -217,7 +225,7 @@ function ToggleRow({
             ? "!bg-rose-600 hover:!bg-rose-500"
             : "!bg-emerald-600 hover:!bg-emerald-500"
         }
-        disabled={disabled || limitReached}
+        disabled={disabled || limitReached || otherActive}
       />
     </div>
   );
@@ -263,58 +271,69 @@ function StatusGrid({ state }: { state: SwToPopup }) {
 // chat-list reply loop. Shows a separate counter and button so the
 // user can opt into proactive greets on /web/chat/recommend.
 function RecommendRow({
- recommendEnabled,
- recommendGreeted,
- dailyLimit,
- reachedDailyLimit,
- onClick,
+  recommendEnabled,
+  recommendGreeted,
+  dailyLimit,
+  reachedDailyLimit,
+  onClick,
+  otherActive,
 }: {
- recommendEnabled: boolean;
- recommendGreeted: number;
- dailyLimit: number;
- reachedDailyLimit: boolean;
- onClick: () => void;
+  recommendEnabled: boolean;
+  recommendGreeted: number;
+  dailyLimit: number;
+  reachedDailyLimit: boolean;
+  onClick: () => void;
+  otherActive: boolean;
 }) {
- const limitReached = reachedDailyLimit;
- const label = limitReached ? "Limit reached" : recommendEnabled ? "Stop" : "Greet";
- return (
- <div
- className={`flex items-center justify-between p-3 rounded-md mb-2 ${
- limitReached
- ? "bg-amber-900"
- : recommendEnabled
- ? "bg-sky-900"
- : "bg-slate-800"
- }`}
- >
- <div>
- <div className="text-[13px] font-semibold">Recommend-greet</div>
- <div
- className={`text-[11px] ${
- limitReached
- ? "text-amber-300"
- : recommendEnabled
- ? "text-sky-300"
- : "text-slate-400"
- }`}
- >
- {recommendGreeted} / {dailyLimit} today
- </div>
- </div>
- <ButtonComponent
- onClick={onClick}
- text={label}
- classNameProps={
- limitReached
- ? "!bg-amber-700 !cursor-not-allowed hover:!bg-amber-700"
- : recommendEnabled
- ? "!bg-rose-600 hover:!bg-rose-500"
- : "!bg-sky-600 hover:!bg-sky-500"
- }
- disabled={limitReached}
- />
- </div>
- );
+  const limitReached = reachedDailyLimit;
+  const label = (limitReached || otherActive || recommendEnabled)
+    ? "Disable"
+    : "Enable";
+  return (
+    <div
+      className={`flex items-center justify-between p-3 rounded-md mb-2 ${
+        limitReached
+          ? "bg-amber-900"
+          : recommendEnabled
+          ? "bg-sky-900"
+          : "bg-slate-800"
+      }`}
+    >
+      <div>
+        <div className="text-[13px] font-semibold">Recommend-greet</div>
+        <div
+          className={`text-[11px] ${
+            otherActive ? "text-slate-400 italic" : ""
+          }`}
+        >
+          {otherActive ? "Auto-reply is currently running" : ""}
+        </div>
+        <div
+          className={`text-[11px] ${
+            limitReached
+              ? "text-amber-300"
+              : recommendEnabled
+              ? "text-sky-300"
+              : "text-slate-400"
+          }`}
+        >
+          {recommendGreeted} / {dailyLimit} today
+        </div>
+      </div>
+      <ButtonComponent
+        onClick={onClick}
+        text={label}
+        classNameProps={
+          limitReached
+            ? "!bg-amber-700 !cursor-not-allowed hover:!bg-amber-700"
+            : recommendEnabled
+            ? "!bg-rose-600 hover:!bg-rose-500"
+            : "!bg-sky-600 hover:!bg-sky-500"
+        }
+        disabled={limitReached || otherActive}
+      />
+    </div>
+  );
 }
 
 function ErrorLine({
@@ -323,13 +342,13 @@ function ErrorLine({
   onReset,
   resetting,
 }: {
-  msg: string
-  limitReached: boolean
-  onReset: () => void
-  resetting: boolean
+  msg: string;
+  limitReached: boolean;
+  onReset: () => void;
+  resetting: boolean;
 }) {
   if (!msg && !limitReached) {
-    return <div className="text-[11px] min-h-[14px]">&nbsp;</div>
+    return <div className="text-[11px] min-h-[14px]">&nbsp;</div>;
   }
   return (
     <div className="text-[11px] text-rose-400 min-h-[14px] flex items-center gap-2 flex-wrap">
@@ -344,9 +363,9 @@ function ErrorLine({
           disabled={resetting}
           className="px-2 py-0.5 rounded bg-amber-700 hover:bg-amber-600 text-white text-[10px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {resetting ? 'Resetting…' : 'Reset today'}
+          {resetting ? "Resetting…" : "Reset today"}
         </button>
       )}
     </div>
-  )
+  );
 }
