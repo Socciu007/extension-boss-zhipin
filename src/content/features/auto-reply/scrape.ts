@@ -153,7 +153,7 @@ export function findRecommended(): RecommendedCandidate[] {
       tags,
       workExps,
     }
-  })
+  }).filter((c) => c.name.trim() !== '')
 }
 
 // Click the "打招呼" button on a single recommended card. BOSS may

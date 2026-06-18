@@ -76,6 +76,35 @@ export async function bumpRecommendGreeted(): Promise<void> {
   await patch({ recommendGreeted: greeted })
 }
 
+// Mark a cardId as greeted (so the loop skips it on the next
+// pick). We also bump the today counter in the same call.
+export async function markGreeted(cardId: string): Promise<Persisted> {
+  const cur = await getAll()
+  const ids = { ...cur.recommendGreetedIds, [cardId]: Date.now() }
+  // LRU prune to MAX_REPLIED_CACHE entries, keeping the most recent.
+  const entries = Object.entries(ids)
+  if (entries.length > MAX_REPLIED_CACHE) {
+    entries.sort((a, b) => b[1] - a[1])
+    const keep = new Set(entries.slice(0, MAX_REPLIED_CACHE).map(([id]) => id))
+    for (const [id] of entries) {
+      if (!keep.has(id)) delete ids[id]
+    }
+  }
+  const greeted = cur.stats.date === todayLocal() ? cur.recommendGreeted + 1 : 1
+  return patch({ recommendGreetedIds: ids, recommendGreeted: greeted })
+}
+
+// Returns true if the candidate has been greeted today.
+export async function hasGreeted(cardId: string): Promise<boolean> {
+  const cur = await getAll()
+  return Boolean(cur.recommendGreetedIds[cardId])
+}
+
+// Drop all greeted-cache entries (called by Reset today).
+export async function clearGreetedCache(): Promise<void> {
+  await patch({ recommendGreetedIds: {} })
+}
+
 // === Conversation (replied) cache with LRU prune ===
 
 export async function markReplied(conv: Conversation): Promise<void> {
@@ -133,6 +162,7 @@ export async function resetDailyStats(): Promise<Persisted> {
     stats: { date: today, sent: 0, errors: 0, lastErrorMsg: "" },
   }
   if (cur.recommendGreeted !== 0) p.recommendGreeted = 0
+  p.recommendGreetedIds = {}
   return patch(p) as any
 }
 

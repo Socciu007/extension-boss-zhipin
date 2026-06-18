@@ -32,6 +32,10 @@ type Persisted = {
   // Recommend-greet flow is independent from the chat-list reply loop.
   recommendEnabled: boolean
   recommendGreeted: number // how many candidates greeted today (resets with stats)
+ // LRU cache of candidates we have already greeted (by cardId), so the
+ // loop does not pick the same card again within the same day. Reset by
+ // resetDailyStats (manual) or resetDailyStatsIfStale (midnight).
+ recommendGreetedIds: Record<string, number> // cardId -> epoch ms
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -50,6 +54,7 @@ const DEFAULT_PERSISTED: Persisted = {
   isRunning: false,
   recommendEnabled: false,
   recommendGreeted: 0,
+  recommendGreetedIds: {},
 }
 
 const MAX_REPLIED_CACHE = 2000 // LRU bound

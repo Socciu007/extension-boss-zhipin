@@ -69,7 +69,6 @@ export async function runOnce(): Promise<void> {
     // Click 沟通 tab first so the chat list is mounted before we scrape.
     // No-op if the tab is already active.
     const tabRes = await sendToTab(tabId, { type: 'CLICK_TAB', tab: 'chat' })
-    console.log('tabRes', tabRes)
     if (!tabRes || tabRes.type !== 'CLICKED_TAB' || !tabRes.ok) {
       await storage.setEnabled(false)
       await storage.recordError('Please try to load the chat page again before enabling auto-reply.')
@@ -77,18 +76,15 @@ export async function runOnce(): Promise<void> {
     }
 
     const conv = await pickOneUnreplied(tabId)
-    console.log('conv', conv)
     if (!conv) return
 
     // Open conversation, then read the last candidate message.
     const opened = await sendToTab(tabId, { type: 'OPEN_CONV', convId: conv.id })
-    console.log('opened', opened)
     if (!opened || opened.type !== 'CONV_OPENED') {
       await storage.recordError(`openConv failed for ${conv.id}`)
       return
     }
     const last = await sendToTab(tabId, { type: 'READ_LAST_MESSAGE', convId: conv.id })
-    console.log('lastMsg', last)
     if (!last || last.type !== 'LAST_MESSAGE') {
       await storage.recordError(`No candidate text for ${conv.id}`)
       return
@@ -102,9 +98,7 @@ export async function runOnce(): Promise<void> {
       return
     }
 
-    console.log('replyAI', reply)
     const sent = await sendToTab(tabId, { type: 'SEND_REPLY', convId: conv.id, text: reply })
-    console.log('sentMsg', sent)
     if (!sent || sent.type !== 'REPLY_SENT' || !sent.ok) {
       const errMsg = sent?.type === 'REPLY_SENT' && sent.error ? sent.error : 'unknown'
       await storage.recordError(`Send failed for ${conv.id}: ${errMsg}`)
@@ -169,7 +163,11 @@ export async function runRecommendGreetOnce(): Promise<void> {
     }
     const list = await sendToTab(tabId, { type: "SCRAPE_RECOMMENDED" })
     if (!list || list.type !== "RECOMMENDED_LIST" || list.candidates.length === 0) return
-    const target = list.candidates[0]
+    // Skip candidates already greeted today (in the local cache).
+    const greetedIds = new Set(Object.keys((await storage.getAll()).recommendGreetedIds))
+    const candidates = list.candidates.filter((c) => !greetedIds.has(c.id))
+    if (candidates.length === 0) return
+    const target = candidates[0]
     const greet = await sendToTab(tabId, { type: "GREET_CANDIDATE", cardId: target.id })
     console.log('greet', greet)
     if (!greet || greet.type !== "GREETED" || !greet.ok) {
@@ -177,13 +175,9 @@ export async function runRecommendGreetOnce(): Promise<void> {
       await storage.recordError('recommend-greet failed: ' + (err ?? 'unknown'))
       return
     }
-    const openerText = await buildOpener(target)
-    const sent = await sendToTab(tabId, { type: "SEND_REPLY", convId: target.id, text: openerText })
-    if (!sent || sent.type !== "REPLY_SENT" || !sent.ok) {
-      await storage.recordError('recommend-greet send failed')
-      return
-    }
-    await storage.bumpSent()
+
+    // Mark this card as greeted so the loop won't pick it again today.
+    await storage.markGreeted(target.id)
     await storage.bumpRecommendGreeted()
     const wait = jitter(cur.config.throttleMinMs, cur.config.throttleMaxMs)
     setTimeout(() => {
@@ -194,10 +188,4 @@ export async function runRecommendGreetOnce(): Promise<void> {
   } finally {
     await storage.releaseRunLock()
   }
-}
-
-async function buildOpener(
-  c: { name: string; years: string },
-): Promise<string> {
-  return `你好 ${c.name || ""}, 我是招聘方，看到你有 ${c.years || "?"} 年经验。方便发一份简历我评估下吗？`
 }
