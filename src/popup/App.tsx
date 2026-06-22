@@ -8,6 +8,12 @@ import ButtonComponent from "@/components/ButtonComponent";
 import { showToast } from "./scripts";
 import type { PopupToSw, SwToPopup } from "@/shared/messages";
 
+// Emoji icons as runtime-evaluated Unicode codepoints. Avoids raw 4-byte
+// UTF-8 in source (Tailwind v4 scanner issue) without dangerouslySetInnerHTML.
+const ICON_MAIL = String.fromCodePoint(0x1f4ec);
+const ICON_WARN = String.fromCodePoint(0x26a0, 0xfe0f);
+const ICON_RELOAD = String.fromCodePoint(0x1f504);
+
 const DEFAULT_STATE: SwToPopup = {
   type: "STATE",
   enabled: false,
@@ -24,6 +30,8 @@ const DEFAULT_STATE: SwToPopup = {
 export default function App() {
   const [state, setState] = useState<SwToPopup>(DEFAULT_STATE);
   const [toggling, setToggling] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [recommendToggling, setRecommendToggling] = useState(false);
   // Track the last-seen value of reachedDailyLimit so we only fire the
   // "limit reached" toast on the transition (not on every poll).
   const lastReached = useRef(false);
@@ -86,8 +94,13 @@ export default function App() {
         type: "TOGGLE_ENABLED",
         enabled: next,
       } satisfies PopupToSw);
-      if (r && r.type === "STATE") setState(r);
-      showToast(next ? "Auto-reply is enabled" : "Auto-reply is disabled", "info");
+      if (r && r.type === "STATE") {
+        setState(r);
+        showToast(
+          next ? "Auto-reply is enabled" : "Auto-reply is disabled",
+          "info"
+        );
+      }
     } catch (e) {
       showToast(`Error: ${(e as Error).message}`, "error");
     } finally {
@@ -96,6 +109,7 @@ export default function App() {
   };
 
   const handleSeenGreet = async () => {
+    if (recommendToggling) return;
     if (state.reachedDailyLimit && !state.recommendEnabled) {
       showToast(
         `Reached daily limit ${state.dailyLimit} greets/day. Please try again tomorrow.`,
@@ -104,22 +118,26 @@ export default function App() {
       return;
     }
     const next = !state.recommendEnabled;
+    setRecommendToggling(true);
     try {
       const r = await chrome.runtime.sendMessage({
         type: "TOGGLE_RECOMMEND",
         enabled: next,
       } satisfies PopupToSw);
-      if (r && r.type === "STATE") setState(r);
-      showToast(
-        next ? "Recommend-greet is enabled" : "Recommend-greet is disabled",
-        "info"
-      );
+      if (r && r.type === "STATE") {
+        setState(r);
+        showToast(
+          next ? "Recommend-greet is enabled" : "Recommend-greet is disabled",
+          "info"
+        );
+      }
     } catch (e) {
       showToast(`Error: ${(e as Error).message}`, "error");
+    } finally {
+      setRecommendToggling(false);
     }
   };
 
-  const [resetting, setResetting] = useState(false);
   const handleReset = async () => {
     if (resetting) return;
     setResetting(true);
@@ -127,8 +145,10 @@ export default function App() {
       const r = await chrome.runtime.sendMessage({
         type: "RESET_STATS",
       } satisfies PopupToSw);
-      if (r && r.type === "STATE") setState(r);
-      showToast("Today's counters have been reset", "success");
+      if (r && r.type === "STATE") {
+        setState(r);
+        showToast("Today's counters have been reset", "success");
+      }
     } catch (e) {
       showToast(`Error: ${(e as Error).message}`, "error");
     } finally {
@@ -161,6 +181,7 @@ export default function App() {
         reachedDailyLimit={state.reachedDailyLimit}
         onClick={handleSeenGreet}
         otherActive={state.enabled}
+        toggling={recommendToggling}
       />
       <StatusGrid state={state} />
       <ErrorLine
@@ -186,7 +207,7 @@ function ToggleRow({
   limitReached: boolean;
   otherActive: boolean;
 }) {
-  const buttonLabel = limitReached ? "Disable" : enabled ? "Disable" : "Enable";
+  const buttonLabel = (limitReached || enabled) ? "Disable" : "Enable";
   return (
     <div
       className={`flex items-center justify-between p-3 rounded-md mb-2 ${
@@ -231,16 +252,13 @@ function ToggleRow({
   );
 }
 
-// Emoji are stored as HTML numeric character references so Tailwind's source
-// scanner never sees raw4-byte UTF-8 codepoints and crashes in
-// String.fromCodePoint (a known Tailwind v4 bug, kept here for safety).
 function StatusGrid({ state }: { state: SwToPopup }) {
   const enabled = state.enabled;
   const cells: { icon: string; value: string; active?: boolean }[] = [
-    { icon: "&#128236;", value: `${state.sent}/${state.dailyLimit}` },
-    { icon: "&#9888;&#65039;", value: `${state.errors} errors` },
+    { icon: ICON_MAIL, value: `${state.sent}/${state.dailyLimit}` },
+    { icon: ICON_WARN, value: `${state.errors} errors` },
     {
-      icon: "&#128260;",
+      icon: ICON_RELOAD,
       value: state.isRunning ? "Running" : "Stopped",
       active: state.isRunning,
     },
@@ -258,7 +276,7 @@ function StatusGrid({ state }: { state: SwToPopup }) {
           : "text-white";
         return (
           <div key={i} className={`bg-slate-800 p-1.5 rounded ${colorClass}`}>
-            <span dangerouslySetInnerHTML={{ __html: c.icon }} />{" "}
+            <span>{c.icon}</span>{" "}
             <b>{c.value}</b>
           </div>
         );
@@ -277,6 +295,7 @@ function RecommendRow({
   reachedDailyLimit,
   onClick,
   otherActive,
+  toggling,
 }: {
   recommendEnabled: boolean;
   recommendGreeted: number;
@@ -284,6 +303,7 @@ function RecommendRow({
   reachedDailyLimit: boolean;
   onClick: () => void;
   otherActive: boolean;
+  toggling: boolean;
 }) {
   const limitReached = reachedDailyLimit;
   const label = (limitReached || otherActive || recommendEnabled)
@@ -330,7 +350,7 @@ function RecommendRow({
             ? "!bg-rose-600 hover:!bg-rose-500"
             : "!bg-sky-600 hover:!bg-sky-500"
         }
-        disabled={limitReached || otherActive}
+        disabled={toggling || limitReached || otherActive}
       />
     </div>
   );
@@ -354,7 +374,7 @@ function ErrorLine({
     <div className="text-[11px] text-rose-400 min-h-[14px] flex items-center gap-2 flex-wrap">
       {msg && (
         <span>
-          <span dangerouslySetInnerHTML={{ __html: "&#9888;&#65039;" }} /> {msg}
+          <span>{ICON_WARN}</span> {msg}
         </span>
       )}
       {limitReached && (
