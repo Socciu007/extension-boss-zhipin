@@ -305,7 +305,7 @@ function RecommendRow({
   otherActive: boolean;
   toggling: boolean;
 }) {
-  const limitReached = reachedDailyLimit;
+  const limitReached = recommendGreeted >= dailyLimit || reachedDailyLimit;
   const label = (limitReached || otherActive || recommendEnabled)
     ? "Disable"
     : "Enable";

@@ -174,9 +174,9 @@ export async function greetCandidate(cardId: string): Promise<{ ok: boolean; err
 
   // Some candidates trigger a confirm dialog (e.g. "该用户已被您沟通过").
   // Try to confirm; if no dialog, that's fine.
-  const confirm = await waitFor(SEL.recommendConfirmBtn, { timeout: 2000 })
-    .catch(() => null)
-  if (confirm) (confirm as HTMLElement).click()
+  // const confirm = await waitFor(SEL.recommendConfirmBtn, { timeout: 2000 })
+  //   .catch(() => null)
+  // if (confirm) (confirm as HTMLElement).click()
 
   // Wait briefly for the chat panel to mount so the next operation
   // (type & send) can run without a race.

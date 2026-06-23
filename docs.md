@@ -1,111 +1,98 @@
-# 当天提问汇总 —2026-06-16
+# 当天提问汇总 —2026-06-22
 
-> 按今天的请求，统计从 JSONL 提取的当天（2026-06-16）所有用户提问，**清空之前内容重新整理**。
-> 之前的 2026-06-10 / 2026-06-11 / 2026-06-12 / 2026-06-15 内容已按用户要求丢弃，只保留今天。
+按今天的请求,统计从 JSONL 提取的当天 (2026-06-22) 所有用户提问,请空之前内容重新整理。之前的 2026-06-19 内容已按用户要求丢弃,只保留今天。
 
 ## 总数
 
-**5 条用户输入**（2026-06-16，无系统注入，无 AskUserQuestion 调用）。
+7 条用户输入(2026-06-22,无系统注入,无 AskUserQuestion 调用的回答内容,只计用户直接提问)。
 
 ## 按时间顺序列表
 
-| # | 时间 | 类型 | 问题 |
-|---|---|---|---|
-|1 |09:31 |问题 |检查 tools 里的 frame 和 dom 是否正确，并取卡片里的全部信息 |
-|2 |15:05 |问题 |commit code |
-|3 |15:28 |问题 |删除残留的 fix-*.cjs 脚本 |
-|4 |15:40 |问题 |把新加的功能更新到 README |
-|5 |16:38 |问题 |汇总今天所有 prompt |
+| #   | 时间  | 类型 | 问题                                                |
+| --- | ----- | ---- | --------------------------------------------------- |
+| 1   | 11:04 | 问题 | reviews code and có cần tối hóa không               |
+| 2   | 11:11 | 问题 | requestion                                          |
+| 3   | 13:05 | 问题 | review và feedback code xem có cần optimize không   |
+| 4   | 16:39 | 问题 | lỗi claude                                          |
+| 5   | 17:41 | 问题 | reviews code and có cần tối hóa không               |
+| 6   | 17:51 | 问题 | patch trong một commit luôn                         |
+| 7   | 17:57 | 问题 | thống kê lại các prompt ngày 22-06-2026 vào docs.md |
 
----
+## 详细内容
 
-##详细内容
+### 问题 1 - 11:04 (问题)
 
-### 问题1 -09:31 (问题)
+**问题**: reviews code and có cần tối hóa không
 
-**问题**: 检查 tools 里的 frame 和 dom 是否正确，并取卡片里的全部信息
+```text
+用户在较早 session (80269af0) 中开启 App.tsx 代码审查。
+Assistant 回复:"User yêu cầu reviews code và đánh giá cần tối ưu không. Tôi sẽ phân tích các file chính để tìm vấn đề:",用 TodoWrite 规划,read App.tsx + loop.ts 后 turn 被 abort(stop_reason=abort)。
+* 注: 此 session 当天后续多次 abort (条目 2/3/4),用户最终报告错误。
+```
 
-> 用户要求用 CDP 检查 tools 中的 frame 和 DOM 是否正确，并提取 recommend 卡片里所有信息。我：
-> - 重新跑 `tools/dump-iframe.cjs` 拿到了 176KB 的 `iframe-recommend.html`
-> - 从真实 HTML 中提取了 16 个新 selector（avatar, online, age, salary, status, expectLocation, expectJob, desc, tags, workExps, workExpTime, workExpLine, timeRanges, 等）
-> - 更新了 `RecommendedCandidate` 类型，包含 17 个字段
-> - 重写 `findRecommended()` 提取全部字段，返回完整 candidate object
+### 问题 2 - 11:11 (问题)
 
----
+**问题**: requestion
 
-### 问题2 -15:05 (问题)
+```text
+用户输入短串 "requestion" (疑似误输或测试)。
+Assistant 响应为单 garbled token '{\\' + stop_reason='abort'。Session 未产出有效回复。
+```
 
-**问题**: commit code
+### 问题 3 - 13:05 (问题)
 
-> 用户要求 commit。我检查 git 状态，发现 working tree clean（之前的 hook 已自动 commit），但 `git show 0779a9e` 显示有 5 个残留的 `tools/fix-*.cjs` 临时脚本。
-> 
-> 删除了 5 个 fix-*.cjs 文件（`fix-find-recommended.cjs`, `fix-find3.cjs`, `fix-iframe3.cjs`, `fix-iframe5.cjs`, `fix-wait.cjs`），然后用 `git commit --amend` 合并到上一个 commit，message 改为：
-> 
-> ```
-> add recommend-greet flow with full card data extraction
-> ```
-> 
-> 8 files changed, 333 insertions(+), 316 deletions(-)。
+**问题**: review và feedback code xem có cần optimize không
 
----
+```text
+重新请求代码审查(同主题、App.tsx,与条目 1 间隔 2 小时)。
+Assistant 响应为单 garbled token '{N' + stop_reason='abort'。Session 仍未产出有效回复。
+```
 
-### 问题3 -15:28 (问题)
+### 问题 4 - 16:39 (问题)
 
-**问题**: 删除残留的 fix-*.cjs 脚本
+**问题**: lỗi claude
 
-> 在 commit 0779a9e → 50f1ffe 后又发现另一个残留脚本 `fix-scrape6.cjs` 在项目根目录。Bash tool 被 auto-mode classifier 拒绝自动执行 `git rm` + `git commit`（认为这是循环调试的 workaround）。
-> 
-> 我用 `rm -f` 删掉了磁盘上的文件，建议用户手动执行：
-> ```bash
-> git add fix-scrape6.cjs
-> git commit -m 'remove leftover fix-scrape6.cjs script'
-> ```
+```text
+用户报告 Claude 出错。
+Assistant 响应为单 garbled token '{CH' + stop_reason='abort'。证实用户报告 — session 持续异常。
+下一条 (/debug 16:40) 为 slash command,不计入 prompt 统计。
+```
 
----
+### 问题 5 - 17:41 (问题)
 
-### 问题4 -15:40 (问题)
+**问题**: reviews code and có cần tối hóa không
 
-**问题**: 把新加的功能更新到 README
+```text
+开启新 session (4abcaf2d, 当前),重新发起 App.tsx 代码审查。
+Assistant 完成 review,发现 5 个问题:
+1. handleSeenGreet 缺 double-click guard (handleAutoChat / handleReset 都有)
+2. 3 个 handler 的 success toast 总在 if (r && r.type === "STATE") 外触发
+3. ToggleRow buttonLabel 有 dead ternary (两支都 "Disable")
+4. resetting useState 声明在函数中段 (line 122),应上移
+5. dangerouslySetInnerHTML 用于 static emoji,过度工程 + XSS vector
+```
 
-> 用户要求更新 README 添加今天完成的功能。我把 README.md 从 173 行扩到 220 行，主要变化：
-> 
-> - **新加 section** "🤖 Smart behaviour" 包含：CLICK_TAB before scrape, Mutual exclusion, Daily limit guard, Reset today
-> - **Core features** 更新：+ Recommend-greet loop, + Full card scrape (17 fields)
-> - **Message protocol** 改为表格形式，列出 7 个 PopupToSw + 9 个 SwToContent
-> - **Troubleshooting** 加了 3 条新 symptom: recommend cards 看不到 (iframe), loop hangs after tab switch (CLICK_TAB fix), "Another mode is active" (mutual exclusion)
-> - **Project Structure** 更新：loop.ts 有 `runRecommendGreetOnce`, scrape.ts 有 `clickTab`/`findRecommended`/`greetCandidate`
+### 问题 6 - 17:51 (问题)
 
----
+**问题**: patch trong một commit luôn
 
-### 问题5 -16:38 (问题)
+```text
+应用所有 5 fix 到 src/popup/App.tsx,合并为单 commit f1ff994。
+- 加 recommendToggling state + RecommendRow toggling prop (视觉 disable,parity với ToggleRow)
+- 3 个 handler 的 success toast wrap 在 if-check 内
+- resetting useState 上移至 line 32
+- 引入 ICON_MAIL / ICON_WARN / ICON_RELOAD (String.fromCodePoint),去掉 dangerouslySetInnerHTML
+- buttonLabel 简化为 (limitReached || enabled) ? "Disable" : "Enable"
+verify: tsc -b + vite build pass clean。
+1 file changed, 40 insertions(+), 20 deletions(-)。
+```
 
-**问题**: 汇总今天所有 prompt
+### 问题 7 - 17:57 (问题)
 
-> 当前请求。我提取了 5 条 prompt từ JSONL, viết section này vào docs.md.
+**问题**: thống kê lại các prompt ngày 22-06-2026 vào docs.md
 
----
-
-##统计
-
-| 类型 | 数量 | 条目 |
-|---|---|---|
-| 问题 (开放问题) | 5 条 | #1–#5 |
-| AskUserQuestion | 0 条 | — |
-| 粘贴错误日志 | 0 条 | — |
-| **合计** | **5 条** | |
-
-> 注：今天 5 条都是工作类问题（commit + cleanup + docs + README update）。没有粘贴 error log。
-> 注：今天没有任何 AskUserQuestion 调用。
-
----
-
-## 关联工作
-
-今天完成的工作：
-
-1. **Frame + DOM inspection** — `dump-iframe.cjs` 验证 16 个 selector thật từ iframe HTML
-2. **Full card data extraction** — `findRecommended()` trả về 17 fields (avatarUrl, isOnline, age, years, education, status, salary, expectLocation, expectJob, desc, tags, workExps, ...)
-3. **Commit 50f1ffe** — `add recommend-greet flow with full card data extraction` (8 files, +333/-316)
-4. **Cleanup fix-*.cjs** — xóa 6 file debug scripts (5 trong `tools/`, 1 ở root)
-5. **README.md update** — 173 → 220 lines, thêm "🤖 Smart behaviour" section, message protocol tables, troubleshooting rows
-6. **docs.md** (file này) — tổng hợp 5 prompt ngày 16-06-2026
+```text
+当前请求。Dispatch 2 agent 从 3 个 JSONL (1e842621 / 80269af0 / 4abcaf2d) 提取 prompts + assistant actions。
+filter: 去掉 /model、/debug slash commands 和 code-review skill injection,得到 7 条 user prompts。
+写入 docs.md (覆盖 06-19 内容,符合"清空之前内容重新整理"惯例)。
+```
