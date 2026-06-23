@@ -24,6 +24,26 @@ function sendToTab<T extends SwToContent>(tabId: number, msg: T): Promise<Conten
     })
 }
 
+// Click 沟通 tab once. Returns true if the click succeeded (or no BOSS tab
+// was found — caller decides what to do). Called from the TOGGLE_ENABLED
+// handler in index.ts so each per-conversation tick of the loop doesn't
+// re-click the tab.
+export async function ensureChatTab(): Promise<boolean> {
+  const tabId = await findZhipinTab()
+  if (!tabId) return false
+  const tabRes = await sendToTab(tabId, { type: 'CLICK_TAB', tab: 'chat' })
+  return !!(tabRes && tabRes.type === 'CLICKED_TAB' && tabRes.ok)
+}
+
+// Click 推荐牛人 tab once. Returns true if the click succeeded. Called
+// from the TOGGLE_RECOMMEND handler in index.ts.
+export async function ensureRecommendTab(): Promise<boolean> {
+  const tabId = await findZhipinTab()
+  if (!tabId) return false
+  const tabRes = await sendToTab(tabId, { type: 'CLICK_TAB', tab: 'recommend' })
+  return !!(tabRes && tabRes.type === 'CLICKED_TAB' && tabRes.ok)
+}
+
 // Pick the first conversation that has not been replied to yet (or whose reply
 // is older than the candidate's last snippet). Simpler version: any conv not
 // in the replied cache.
@@ -66,14 +86,9 @@ export async function runOnce(): Promise<void> {
     const tabId = await findZhipinTab()
     if (!tabId) return
 
-    // Click 沟通 tab first so the chat list is mounted before we scrape.
-    // No-op if the tab is already active.
-    const tabRes = await sendToTab(tabId, { type: 'CLICK_TAB', tab: 'chat' })
-    if (!tabRes || tabRes.type !== 'CLICKED_TAB' || !tabRes.ok) {
-      await storage.setEnabled(false)
-      await storage.recordError('Please try to load the chat page again before enabling auto-reply.')
-      return
-    }
+    // The 沟通 tab click happens once in TOGGLE_ENABLED (see ensureChatTab).
+    // Subsequent ticks assume the tab is already on chat and the chat list
+    // is mounted.
 
     const conv = await pickOneUnreplied(tabId)
     if (!conv) return
@@ -154,18 +169,15 @@ export async function runRecommendGreetOnce(): Promise<void> {
     }
     const tabId = await findZhipinTab()
     if (!tabId) return
-    // Click 推荐牛人 tab first so the iframe with candidate cards mounts.
-    const tabRes = await sendToTab(tabId, { type: "CLICK_TAB", tab: "recommend" })
-    if (!tabRes || tabRes.type !== "CLICKED_TAB" || !tabRes.ok) {
-      await storage.setEnabled(false)
-      await storage.recordError('Please try to load the boss zhipin page again before enabling recommend-greet.')
-      return
-    }
+    // The 推荐牛人 tab click happens once in TOGGLE_RECOMMEND (see
+    // ensureRecommendTab). Subsequent ticks assume the iframe is mounted.
     const list = await sendToTab(tabId, { type: "SCRAPE_RECOMMENDED" })
     if (!list || list.type !== "RECOMMENDED_LIST" || list.candidates.length === 0) return
     // Skip candidates already greeted today (in the local cache).
     const greetedIds = new Set(Object.keys((await storage.getAll()).recommendGreetedIds))
+    console.log('greetedIds', greetedIds)
     const candidates = list.candidates.filter((c) => !greetedIds.has(c.id))
+    console.log('candidates', candidates)
     if (candidates.length === 0) return
     const target = candidates[0]
     const greet = await sendToTab(tabId, { type: "GREET_CANDIDATE", cardId: target.id })

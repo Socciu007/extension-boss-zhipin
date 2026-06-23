@@ -44,6 +44,13 @@ async function handlePopupMessage(msg: PopupToSw): Promise<SwToPopup> {
     case 'TOGGLE_ENABLED':
       await storage.setEnabled(msg.enabled)
       if (msg.enabled) {
+        // Click 沟通 tab ONCE on enable. Per-conversation ticks of the
+        // loop assume the tab is already on chat (see runOnce).
+        if (!(await loop.ensureChatTab())) {
+          await storage.setEnabled(false)
+          await storage.recordError('Please try to load the chat page again before enabling auto-reply.')
+          return stateNow()
+        }
         // Fire runOnce immediately on click — no alarm / no kickLoopSoon.
         loop.runOnce().catch((e) => storage.recordError(String(e)))
       } else {
@@ -58,6 +65,13 @@ async function handlePopupMessage(msg: PopupToSw): Promise<SwToPopup> {
     case 'TOGGLE_RECOMMEND':
       await storage.setRecommendEnabled(msg.enabled)
       if (msg.enabled) {
+        // Click 推荐牛人 tab ONCE on enable. Per-card ticks of the loop
+        // assume the iframe is already mounted (see runRecommendGreetOnce).
+        if (!(await loop.ensureRecommendTab())) {
+          await storage.setRecommendEnabled(false)
+          await storage.recordError('Please try to load the boss zhipin page again before enabling recommend-greet.')
+          return stateNow()
+        }
         // Fire the recommend-greet loop immediately on click.
         loop.runRecommendGreetOnce().catch((e) => storage.recordError(String(e)))
       }

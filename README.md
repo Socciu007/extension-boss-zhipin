@@ -203,7 +203,7 @@ The service worker, content script, and popup communicate through typed message 
 | `toolResult` from AskUserQuestion never returns | `chrome.runtime.onMessage` listener returns `false` instead of `true` | Make sure the listener returns `true` to keep the channel open for `sendResponse` |
 | Recommend cards return 0 even though the page shows them | Cards are rendered inside the `recommendFrame` iframe | Use `tools/dump-iframe.cjs` (the main `inspect-boss.cjs` cannot reach cross-frame DOM) |
 | Tailwind v4 source scanner crash on certain Unicode | Tailwind v4's scanner can't handle 4-byte UTF-8 codepoints in `.tsx` | Already mitigated: emoji in `App.tsx` are stored as `&#128236;` HTML entities |
-| Loop hangs after a tab switch | React unmounted the chat list but the loop kept trying to scrape | `CLICK_TAB` is fired before every scrape, so the destination view is mounted before the scrape runs |
+| Loop hangs after a tab switch | React unmounted the chat list but the loop kept trying to scrape | `CLICK_TAB` is fired once on toggle (in `TOGGLE_ENABLED` / `TOGGLE_RECOMMEND`). If the user navigates the BOSS tab away from chat/recommend, the next scrape will fail and the loop will die — re-enable to retry |
 | Popup shows *Another mode is active* in italic on one of the rows | You enabled Auto-reply while Recommend-greet was running (or vice versa) | Click the disabled row's button — it disables the other loop first, then enables itself |
 
 ## 📜 License
