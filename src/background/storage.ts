@@ -68,12 +68,10 @@ export async function setRecommendEnabled(enabled: boolean): Promise<void> {
 export async function bumpRecommendGreeted(): Promise<void> {
   const cur = await getAll()
   // Reset the counter if we rolled over to a new day.
-  const greeted = cur.recommendEnabled
-    ? (cur.stats.date === todayLocal() ? cur.recommendGreeted + 1 : 1)
-    : 1
+  const greeted = (cur.recommendEnabled && cur.stats.date === todayLocal()) ? cur.recommendGreeted + 1 : 1
   // (The count piggy-backs on stats.date for day roll-over, but we still
   // store it as a separate field for clarity in the popup.)
-  await patch({ recommendGreeted: greeted })
+  await patch({ recommendGreeted: greeted, stats: { ...cur.stats, date: todayLocal(), errors: 0, lastErrorMsg: '', lastSuccessMsg: '' } })
 }
 
 // Mark a cardId as greeted (so the loop skips it on the next

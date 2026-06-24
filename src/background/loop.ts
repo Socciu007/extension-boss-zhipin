@@ -172,7 +172,6 @@ export async function runRecommendGreetOnce(): Promise<void> {
     // The 推荐牛人 tab click happens once in TOGGLE_RECOMMEND (see
     // ensureRecommendTab). Subsequent ticks assume the iframe is mounted.
     const list = await sendToTab(tabId, { type: "SCRAPE_RECOMMENDED" })
-    console.log('list', list)
     if (!list || list.type !== "RECOMMENDED_LIST" || list.candidates.length === 0) return
     // Skip candidates already greeted today (in the local cache).
     const greetedIds = new Set(Object.keys((await storage.getAll()).recommendGreetedIds))

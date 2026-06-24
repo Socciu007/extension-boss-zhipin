@@ -6,6 +6,7 @@ import * as loop from './loop'
 import * as storage from './storage'
 import type { PopupToSw, SwToPopup } from '@/shared/messages'
 import { DEFAULT_PERSISTED } from '@/shared/types'
+import { sleep } from '@/content/features/auto-reply/wait'
 
 // Ensure default storage exists on install.
 chrome.runtime.onInstalled.addListener(async () => {
@@ -72,6 +73,7 @@ async function handlePopupMessage(msg: PopupToSw): Promise<SwToPopup> {
           await storage.recordError('Please try to load the boss zhipin page again before enabling recommend-greet.')
           return stateNow()
         }
+        await sleep(5000)
         // Fire the recommend-greet loop immediately on click.
         loop.runRecommendGreetOnce().catch((e) => storage.recordError(String(e)))
       }
