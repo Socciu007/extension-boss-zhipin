@@ -145,21 +145,31 @@ export async function recordError(msg: string): Promise<void> {
   await patch({ stats: { ...stats, errors: stats.errors + 1, lastErrorMsg: msg.slice(0, 200) } })
 }
 
+// Positive achievement message (e.g. daily goal reached). Surfaces as a
+// success toast in the popup. Cleared by clearError / resetDailyStats /
+// bumpSent (next successful send moves the user out of the "limit
+// reached" state).
+export async function recordSuccess(msg: string): Promise<void> {
+  const cur = await getAll()
+  const stats = ensureFreshStats(cur.stats)
+  await patch({ stats: { ...stats, lastSuccessMsg: msg.slice(0, 200) } })
+}
+
 export async function clearError(): Promise<void> {
   const cur = await getAll()
   const stats = ensureFreshStats(cur.stats)
-  await patch({ stats: { ...stats, errors: 0, lastErrorMsg: '' } })
+  await patch({ stats: { ...stats, errors: 0, lastErrorMsg: '', lastSuccessMsg: '' } })
 }
 
-// Force-reset the daily counters (sent, errors, lastErrorMsg) and the
-// recommend-greet counter. Leaves config, enabled flags, conversations
-// cache, and isRunning flag untouched. Useful for the "I've hit the
-// limit but want to keep going" case.
+// Force-reset the daily counters (sent, errors, lastErrorMsg,
+// lastSuccessMsg) and the recommend-greet counter. Leaves config,
+// enabled flags, conversations cache, and isRunning flag untouched.
+// Useful for the "I've hit the limit but want to keep going" case.
 export async function resetDailyStats(): Promise<Persisted> {
   const cur = await getAll()
   const today = todayLocal()
   const p: Partial<Persisted> = {
-    stats: { date: today, sent: 0, errors: 0, lastErrorMsg: "" },
+    stats: { date: today, sent: 0, errors: 0, lastErrorMsg: "", lastSuccessMsg: "" },
   }
   if (cur.recommendGreeted !== 0) p.recommendGreeted = 0
   p.recommendGreetedIds = {}
@@ -182,7 +192,7 @@ export async function resetDailyStatsIfStale(): Promise<Persisted> {
 function ensureFreshStats(s: Persisted['stats']): Persisted['stats'] {
   const today = todayLocal()
   if (s.date === today) return s
-  return { date: today, sent: 0, errors: 0, lastErrorMsg: '' }
+  return { date: today, sent: 0, errors: 0, lastErrorMsg: '', lastSuccessMsg: '' }
 }
 
 // === Race-guard flag ===

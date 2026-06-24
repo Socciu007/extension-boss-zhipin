@@ -21,8 +21,10 @@ const DEFAULT_STATE: SwToPopup = {
   dailyLimit: 200,
   errors: 0,
   lastErrorMsg: "",
+  lastSuccessMsg: "",
   isRunning: false,
   reachedDailyLimit: false,
+  recommendReachedDailyLimit: false,
   recommendEnabled: false,
   recommendGreeted: 0,
 };
@@ -32,9 +34,10 @@ export default function App() {
   const [toggling, setToggling] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [recommendToggling, setRecommendToggling] = useState(false);
-  // Track the last-seen value of reachedDailyLimit so we only fire the
-  // "limit reached" toast on the transition (not on every poll).
-  const lastReached = useRef(false);
+  // Track the last-seen lastSuccessMsg so we fire a success toast on each
+  // new achievement (e.g. daily limit reached for chat or recommend).
+  // Gated by an in-flight latch so rapid polls don't re-trigger.
+  const lastSuccess = useRef("");
   const toastInFlight = useRef(false);
 
   useEffect(() => {
@@ -46,24 +49,21 @@ export default function App() {
         } satisfies PopupToSw);
         if (!cancelled && r && r.type === "STATE") {
           const next = r;
-          // Detect transition false -> true: daily limit just got hit.
+          // New success message from the loop (e.g. daily goal reached).
           if (
-            next.reachedDailyLimit &&
-            !lastReached.current &&
+            next.lastSuccessMsg &&
+            next.lastSuccessMsg !== lastSuccess.current &&
             !toastInFlight.current
           ) {
             toastInFlight.current = true;
-            showToast(
-              `Reached daily limit ${next.dailyLimit} replies/day. Auto-reply is disabled.`,
-              "warning"
-            );
-            // Release the in-flight latch after the toast duration so the user
-            // can re-enable tomorrow without re-triggering on every poll.
+            showToast(next.lastSuccessMsg, "success");
+            // Release the in-flight latch after the toast duration so the
+            // next achievement can fire.
             setTimeout(() => {
               toastInFlight.current = false;
             }, 3500);
           }
-          lastReached.current = next.reachedDailyLimit;
+          lastSuccess.current = next.lastSuccessMsg;
           setState(next);
         }
       } catch {
@@ -186,7 +186,8 @@ export default function App() {
       <StatusGrid state={state} />
       <ErrorLine
         msg={state.lastErrorMsg}
-        limitReached={state.reachedDailyLimit}
+        successMsg={state.lastSuccessMsg}
+        limitReached={state.reachedDailyLimit || state.recommendReachedDailyLimit}
         onReset={handleReset}
         resetting={resetting}
       />
@@ -358,23 +359,32 @@ function RecommendRow({
 
 function ErrorLine({
   msg,
+  successMsg,
   limitReached,
   onReset,
   resetting,
 }: {
   msg: string;
+  successMsg: string;
   limitReached: boolean;
   onReset: () => void;
   resetting: boolean;
 }) {
-  if (!msg && !limitReached) {
+  if (!msg && !successMsg && !limitReached) {
     return <div className="text-[11px] min-h-[14px]">&nbsp;</div>;
   }
+  // successMsg (positive achievement) takes priority over msg (real error).
+  const text = successMsg || msg;
+  const isSuccess = !!successMsg;
   return (
-    <div className="text-[11px] text-rose-400 min-h-[14px] flex items-center gap-2 flex-wrap">
-      {msg && (
+    <div
+      className={`text-[11px] min-h-[14px] flex items-center gap-2 flex-wrap ${
+        isSuccess ? "text-emerald-400" : "text-rose-400"
+      }`}
+    >
+      {text && (
         <span>
-          <span>{ICON_WARN}</span> {msg}
+          <span>{ICON_WARN}</span> {text}
         </span>
       )}
       {limitReached && (

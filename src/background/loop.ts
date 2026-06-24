@@ -71,12 +71,12 @@ export async function runOnce(): Promise<void> {
     const stats = (await storage.getAll()).stats
     if (stats.sent >= cur.config.dailyLimit) {
       // Hit the daily cap. Turn off the toggle so the popup can surface a
-      // toast and the next click won't re-trigger until tomorrow (when
-      // resetDailyStatsIfStale clears the counter).
+      // success toast and the next click won't re-trigger until tomorrow
+      // (when resetDailyStatsIfStale clears the counter).
       if (cur.enabled) {
         await storage.setEnabled(false)
-        await storage.recordError(
-          `Reached daily limit ${cur.config.dailyLimit} replies/day. Auto-reply is disabled.`,
+        await storage.recordSuccess(
+          `Daily goal reached! ${cur.config.dailyLimit} replies sent today. Auto-reply is paused until tomorrow.`,
         )
       }
       return
@@ -161,8 +161,8 @@ export async function runRecommendGreetOnce(): Promise<void> {
     if (cur.recommendGreeted >= cur.config.dailyLimit) {
       if (cur.recommendEnabled) {
         await storage.setRecommendEnabled(false)
-        await storage.recordError(
-          `Limit reached ${cur.config.dailyLimit} greetings today. Recommend-greet is disabled.`,
+        await storage.recordSuccess(
+          `Daily goal reached! ${cur.config.dailyLimit} greets sent today. Recommend-greet is paused until tomorrow.`,
         )
       }
       return
@@ -172,6 +172,7 @@ export async function runRecommendGreetOnce(): Promise<void> {
     // The 推荐牛人 tab click happens once in TOGGLE_RECOMMEND (see
     // ensureRecommendTab). Subsequent ticks assume the iframe is mounted.
     const list = await sendToTab(tabId, { type: "SCRAPE_RECOMMENDED" })
+    console.log('list', list)
     if (!list || list.type !== "RECOMMENDED_LIST" || list.candidates.length === 0) return
     // Skip candidates already greeted today (in the local cache).
     const greetedIds = new Set(Object.keys((await storage.getAll()).recommendGreetedIds))

@@ -78,11 +78,19 @@ type SwToPopup = {
   dailyLimit: number
   errors: number
   lastErrorMsg: string
+  // Positive achievement message (e.g. "Daily goal reached! X replies
+  // sent today."). Cleared by clearError / resetDailyStats / bumpSent.
+  lastSuccessMsg: string
   isRunning: boolean
   // True when sent today has reached dailyLimit. Cleared at midnight by
   // resetDailyStatsIfStale. The popup uses this to surface a "limit reached"
   // toast and to prevent the user from re-enabling until tomorrow.
   reachedDailyLimit: boolean
+  // True when recommendGreeted has reached dailyLimit. Independent flag
+  // because the chat and recommend counters share the same dailyLimit but
+  // can be in different states. Drives the Reset button for the recommend
+  // row and the recommend-greet success toast.
+  recommendReachedDailyLimit: boolean
   // Recommend-greet loop state
   recommendEnabled: boolean
   recommendGreeted: number // how many candidates greeted today

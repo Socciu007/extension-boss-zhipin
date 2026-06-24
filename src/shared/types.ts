@@ -21,6 +21,10 @@ type DailyStats = {
   sent: number
   errors: number
   lastErrorMsg: string // empty if OK
+  // Positive achievement message (e.g. "Daily goal reached!"). Surfaces as
+  // a success toast in the popup and renders in ErrorLine alongside the
+  // Reset button. Cleared by bumpSent / clearError / resetDailyStats.
+  lastSuccessMsg: string
 }
 
 type Persisted = {
@@ -49,7 +53,7 @@ const DEFAULT_CONFIG: AppConfig = {
 const DEFAULT_PERSISTED: Persisted = {
   config: DEFAULT_CONFIG,
   conversations: {},
-  stats: { date: todayLocal(), sent: 0, errors: 0, lastErrorMsg: '' },
+  stats: { date: todayLocal(), sent: 0, errors: 0, lastErrorMsg: '', lastSuccessMsg: '' },
   enabled: false,
   isRunning: false,
   recommendEnabled: false,

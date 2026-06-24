@@ -100,8 +100,10 @@ function buildState(cur: Awaited<ReturnType<typeof storage.getAll>>): SwToPopup 
     dailyLimit: cur.config.dailyLimit,
     errors: cur.stats.errors,
     lastErrorMsg: cur.stats.lastErrorMsg,
+    lastSuccessMsg: cur.stats.lastSuccessMsg,
     isRunning: cur.isRunning,
     reachedDailyLimit: cur.stats.sent >= cur.config.dailyLimit,
+    recommendReachedDailyLimit: cur.recommendGreeted >= cur.config.dailyLimit,
     recommendEnabled: cur.recommendEnabled,
     recommendGreeted: cur.recommendGreeted,
   }
