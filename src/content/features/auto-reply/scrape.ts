@@ -160,6 +160,7 @@ export function findRecommended(): RecommendedCandidate[] {
 // open a confirm modal first; we wait for it and click through. If
 // the button is disabled (already greeted), we resolve { ok: false }.
 export async function greetCandidate(cardId: string): Promise<{ ok: boolean; error?: string }> {
+  await sleep(5000)
   const card = findCardById(cardId)
   if (!card) return { ok: false, error: 'card not found' }
 
