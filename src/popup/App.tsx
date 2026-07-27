@@ -18,7 +18,7 @@ const DEFAULT_STATE: SwToPopup = {
   type: "STATE",
   enabled: false,
   sent: 0,
-  dailyLimit: 200,
+  dailyLimit: 10,
   errors: 0,
   lastErrorMsg: "",
   lastSuccessMsg: "",
@@ -110,7 +110,7 @@ export default function App() {
 
   const handleSeenGreet = async () => {
     if (recommendToggling) return;
-    if (state.reachedDailyLimit && !state.recommendEnabled) {
+    if (state.recommendReachedDailyLimit && !state.recommendEnabled) {
       showToast(
         `Reached daily limit ${state.dailyLimit} greets/day. Please try again tomorrow.`,
         "warning"
@@ -178,7 +178,7 @@ export default function App() {
         recommendEnabled={state.recommendEnabled}
         recommendGreeted={state.recommendGreeted}
         dailyLimit={state.dailyLimit}
-        reachedDailyLimit={state.reachedDailyLimit}
+        reachedDailyLimit={state.recommendReachedDailyLimit}
         onClick={handleSeenGreet}
         otherActive={state.enabled}
         toggling={recommendToggling}
@@ -187,7 +187,9 @@ export default function App() {
       <ErrorLine
         msg={state.lastErrorMsg}
         successMsg={state.lastSuccessMsg}
-        limitReached={state.reachedDailyLimit || state.recommendReachedDailyLimit}
+        limitReached={
+          state.reachedDailyLimit || state.recommendReachedDailyLimit
+        }
         onReset={handleReset}
         resetting={resetting}
       />

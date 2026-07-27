@@ -87,6 +87,9 @@ export async function clickTab(
   const waitForSel = tab === 'chat'
     ? ['.user-list', '[role="listitem"]']
     : ['iframe[name="recommendFrame"]']
+  if (tab === 'recommend') {
+    await sleep(5000)
+  }
   const arrived = await waitFor(waitForSel, { timeout: 5000 }).then(Boolean).catch(() => false)
   if (!arrived) return { ok: false, error: `tab ${tab} clicked but view did not mount in 5s` }
   return { ok: true }
@@ -160,7 +163,6 @@ export function findRecommended(): RecommendedCandidate[] {
 // open a confirm modal first; we wait for it and click through. If
 // the button is disabled (already greeted), we resolve { ok: false }.
 export async function greetCandidate(cardId: string): Promise<{ ok: boolean; error?: string }> {
-  await sleep(5000)
   const card = findCardById(cardId)
   if (!card) return { ok: false, error: 'card not found' }
 
