@@ -88,8 +88,7 @@ export async function markGreeted(cardId: string): Promise<Persisted> {
       if (!keep.has(id)) delete ids[id]
     }
   }
-  const greeted = cur.stats.date === todayLocal() ? cur.recommendGreeted + 1 : 1
-  return patch({ recommendGreetedIds: ids, recommendGreeted: greeted })
+  return patch({ recommendGreetedIds: ids })
 }
 
 // Returns true if the candidate has been greeted today.
