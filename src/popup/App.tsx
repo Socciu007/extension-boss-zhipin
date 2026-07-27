@@ -18,7 +18,7 @@ const DEFAULT_STATE: SwToPopup = {
   type: "STATE",
   enabled: false,
   sent: 0,
-  dailyLimit: 10,
+  dailyLimit: 50,
   errors: 0,
   lastErrorMsg: "",
   lastSuccessMsg: "",
