@@ -60,10 +60,16 @@ async function handlePopupMessage(msg: PopupToSw): Promise<SwToPopup> {
       }
       return stateNow()
     case 'UPDATE_CONFIG':
-      // No-op: API key is hardcoded in @/shared/prompt; config is not
-      // user-editable in v1. Kept in the union for backward compat.
+      await storage.updateConfig(msg.config)
       return stateNow()
-    case 'TOGGLE_RECOMMEND':
+    case 'TOGGLE_RECOMMEND': {
+      // Read the latest config (popup just sent UPDATE_CONFIG, but the
+      // round-trip may not have landed yet — race-guard via storage).
+      const cur = await storage.getAll()
+      if (msg.enabled && cur.config.recommendPosition.trim() === '') {
+        await storage.recordError('Position required for recommend-greet')
+        return stateNow()
+      }
       await storage.setRecommendEnabled(msg.enabled)
       if (msg.enabled) {
         // Click 推荐牛人 tab ONCE on enable. Per-card ticks of the loop
@@ -78,6 +84,7 @@ async function handlePopupMessage(msg: PopupToSw): Promise<SwToPopup> {
         loop.runRecommendGreetOnce().catch((e) => storage.recordError(String(e)))
       }
       return stateNow()
+    }
     case 'CLEAR_REPLIED':
       await storage.clearReplied()
       return stateNow()
@@ -108,6 +115,7 @@ function buildState(cur: Awaited<ReturnType<typeof storage.getAll>>): SwToPopup 
     recommendReachedDailyLimit: cur.recommendGreeted >= cur.config.dailyLimit,
     recommendEnabled: cur.recommendEnabled,
     recommendGreeted: cur.recommendGreeted,
+    recommendPosition: cur.config.recommendPosition,
   }
 }
 
