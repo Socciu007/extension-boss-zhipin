@@ -130,6 +130,7 @@ export default function App() {
   };
 
   const handleSeenGreet = async () => {
+    console.log("recommendToggling", recommendToggling);
     if (recommendToggling) return;
     // Flush so the SW guard sees the latest position (storage is the
     // source of truth for the empty-check).
@@ -138,6 +139,7 @@ export default function App() {
     // position is empty, but a stray click (or future bug) could still
     // fire this handler. Surface a clear message instead of silently
     // hitting the SW guard.
+    console.log("position", position);
     if (position.trim() === "") {
       showToast("Please fill in the job position!", "warning");
       return;
@@ -396,7 +398,6 @@ function RecommendRow({
   onPositionChange: (next: string) => void;
 }) {
   const limitReached = recommendGreeted >= dailyLimit || reachedDailyLimit;
-  const positionEmpty = position.trim() === "";
   const label = (limitReached || otherActive || recommendEnabled)
     ? "Disable"
     : "Enable";
@@ -442,7 +443,7 @@ function RecommendRow({
               ? "!bg-rose-600 hover:!bg-rose-500"
               : "!bg-sky-600 hover:!bg-sky-500"
           }
-          disabled={toggling || limitReached || otherActive || positionEmpty}
+          disabled={toggling || limitReached || otherActive}
         />
       </div>
       <input
