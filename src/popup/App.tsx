@@ -38,7 +38,14 @@ export default function App() {
   // Position is stored in Persisted.config; local state mirrors it.
   // Debounced so we don't send UPDATE_CONFIG on every keystroke.
   const [position, setPosition] = useState(DEFAULT_STATE.recommendPosition);
-  const positionDebounceRef = useRef<number | null>(null);
+  // Tracks an in-flight debounced UPDATE_CONFIG so flushPositionDebounce
+  // can send the same value the debounce WOULD have sent, not the React
+  // state at click-time (which may not yet reflect the latest keystroke).
+  interface PendingPosition {
+    timer: number;
+    value: string;
+  }
+  const positionDebounceRef = useRef<PendingPosition | null>(null);
   // Tracks whether the first GET_STATE poll has been used to hydrate
   // `position`. Prevents the SW echo from clobbering user input.
   const positionSyncedRef = useRef(false);
@@ -176,9 +183,9 @@ export default function App() {
   const handlePositionChange = (next: string) => {
     setPosition(next);
     if (positionDebounceRef.current !== null) {
-      clearTimeout(positionDebounceRef.current);
+      clearTimeout(positionDebounceRef.current.timer);
     }
-    positionDebounceRef.current = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       chrome.runtime
         .sendMessage({
           type: "UPDATE_CONFIG",
@@ -187,19 +194,21 @@ export default function App() {
         .catch((e) => console.warn("[popup] UPDATE_CONFIG failed", e));
       positionDebounceRef.current = null;
     }, 400);
+    positionDebounceRef.current = { timer, value: next.trim() };
   };
 
   // Flush any pending position debounce before toggling recommend. The SW
   // guard reads storage, so if the debounce hasn't fired yet, the check
   // would race against an empty position.
   const flushPositionDebounce = async (): Promise<void> => {
-    if (positionDebounceRef.current === null) return;
-    clearTimeout(positionDebounceRef.current);
+    const pending = positionDebounceRef.current;
+    if (pending === null) return;
+    clearTimeout(pending.timer);
     positionDebounceRef.current = null;
     try {
       await chrome.runtime.sendMessage({
         type: "UPDATE_CONFIG",
-        config: { recommendPosition: position.trim() },
+        config: { recommendPosition: pending.value },
       } satisfies PopupToSw);
     } catch (e) {
       console.warn("[popup] UPDATE_CONFIG flush failed", e);
@@ -210,7 +219,7 @@ export default function App() {
   useEffect(() => {
     return () => {
       if (positionDebounceRef.current !== null) {
-        clearTimeout(positionDebounceRef.current);
+        clearTimeout(positionDebounceRef.current.timer);
         positionDebounceRef.current = null;
       }
     };
@@ -429,6 +438,7 @@ function RecommendRow({
         value={position}
         onChange={(e) => onPositionChange(e.target.value)}
         placeholder="Position (e.g. Java)"
+        aria-label="Position"
         className="mt-2 bg-slate-700 text-white text-[11px] p-1.5 rounded w-full placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
       />
     </div>
