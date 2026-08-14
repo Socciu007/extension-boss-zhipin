@@ -97,7 +97,7 @@ export default function App() {
       if (r && r.type === "STATE") {
         setState(r);
         showToast(
-          next ? "Auto-reply is enabled" : "Auto-reply is disabled",
+          next ? "Auto reply is enabled" : "Auto reply is disabled",
           "info"
         );
       }
@@ -127,7 +127,7 @@ export default function App() {
       if (r && r.type === "STATE") {
         setState(r);
         showToast(
-          next ? "Recommend-greet is enabled" : "Recommend-greet is disabled",
+          next ? "Recommend greet is enabled" : "Recommend greet is disabled",
           "info"
         );
       }
@@ -323,13 +323,13 @@ function RecommendRow({
       }`}
     >
       <div>
-        <div className="text-[13px] font-semibold">Recommend-greet</div>
+        <div className="text-[13px] font-semibold">Recommend greet</div>
         <div
           className={`text-[11px] ${
             otherActive ? "text-slate-400 italic" : ""
           }`}
         >
-          {otherActive ? "Auto-reply is currently running" : ""}
+          {otherActive ? "Auto reply is currently running" : ""}
         </div>
         <div
           className={`text-[11px] ${
