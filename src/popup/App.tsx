@@ -27,6 +27,7 @@ const DEFAULT_STATE: SwToPopup = {
   recommendReachedDailyLimit: false,
   recommendEnabled: false,
   recommendGreeted: 0,
+  recommendPosition: "",
 };
 
 export default function App() {
@@ -34,6 +35,13 @@ export default function App() {
   const [toggling, setToggling] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [recommendToggling, setRecommendToggling] = useState(false);
+  // Position is stored in Persisted.config; local state mirrors it.
+  // Debounced so we don't send UPDATE_CONFIG on every keystroke.
+  const [position, setPosition] = useState(DEFAULT_STATE.recommendPosition);
+  const positionDebounceRef = useRef<number | null>(null);
+  // Tracks whether the first GET_STATE poll has been used to hydrate
+  // `position`. Prevents the SW echo from clobbering user input.
+  const positionSyncedRef = useRef(false);
   // Track the last-seen lastSuccessMsg so we fire a success toast on each
   // new achievement (e.g. daily limit reached for chat or recommend).
   // Gated by an in-flight latch so rapid polls don't re-trigger.
@@ -49,6 +57,12 @@ export default function App() {
         } satisfies PopupToSw);
         if (!cancelled && r && r.type === "STATE") {
           const next = r;
+          // First poll: hydrate position from SW. Subsequent polls leave
+          // local state alone so the user can keep typing.
+          if (!positionSyncedRef.current) {
+            setPosition(next.recommendPosition);
+            positionSyncedRef.current = true;
+          }
           // New success message from the loop (e.g. daily goal reached).
           if (
             next.lastSuccessMsg &&
@@ -110,6 +124,9 @@ export default function App() {
 
   const handleSeenGreet = async () => {
     if (recommendToggling) return;
+    // Flush so the SW guard sees the latest position (storage is the
+    // source of truth for the empty-check).
+    await flushPositionDebounce();
     if (state.recommendReachedDailyLimit && !state.recommendEnabled) {
       showToast(
         `Reached daily limit ${state.dailyLimit} greets/day. Please try again tomorrow.`,
@@ -156,6 +173,49 @@ export default function App() {
     }
   };
 
+  const handlePositionChange = (next: string) => {
+    setPosition(next);
+    if (positionDebounceRef.current !== null) {
+      clearTimeout(positionDebounceRef.current);
+    }
+    positionDebounceRef.current = window.setTimeout(() => {
+      chrome.runtime
+        .sendMessage({
+          type: "UPDATE_CONFIG",
+          config: { recommendPosition: next.trim() },
+        } satisfies PopupToSw)
+        .catch((e) => console.warn("[popup] UPDATE_CONFIG failed", e));
+      positionDebounceRef.current = null;
+    }, 400);
+  };
+
+  // Flush any pending position debounce before toggling recommend. The SW
+  // guard reads storage, so if the debounce hasn't fired yet, the check
+  // would race against an empty position.
+  const flushPositionDebounce = async (): Promise<void> => {
+    if (positionDebounceRef.current === null) return;
+    clearTimeout(positionDebounceRef.current);
+    positionDebounceRef.current = null;
+    try {
+      await chrome.runtime.sendMessage({
+        type: "UPDATE_CONFIG",
+        config: { recommendPosition: position.trim() },
+      } satisfies PopupToSw);
+    } catch (e) {
+      console.warn("[popup] UPDATE_CONFIG flush failed", e);
+    }
+  };
+
+  // Clear any pending debounce timer when the popup unmounts.
+  useEffect(() => {
+    return () => {
+      if (positionDebounceRef.current !== null) {
+        clearTimeout(positionDebounceRef.current);
+        positionDebounceRef.current = null;
+      }
+    };
+  }, []);
+
   return (
     <div className="relative w-[280px] bg-slate-900 text-white p-3 font-sans">
       <div
@@ -182,6 +242,8 @@ export default function App() {
         onClick={handleSeenGreet}
         otherActive={state.enabled}
         toggling={recommendToggling}
+        position={position}
+        onPositionChange={handlePositionChange}
       />
       <StatusGrid state={state} />
       <ErrorLine
@@ -299,6 +361,8 @@ function RecommendRow({
   onClick,
   otherActive,
   toggling,
+  position,
+  onPositionChange,
 }: {
   recommendEnabled: boolean;
   recommendGreeted: number;
@@ -307,14 +371,17 @@ function RecommendRow({
   onClick: () => void;
   otherActive: boolean;
   toggling: boolean;
+  position: string;
+  onPositionChange: (next: string) => void;
 }) {
   const limitReached = recommendGreeted >= dailyLimit || reachedDailyLimit;
+  const positionEmpty = position.trim() === "";
   const label = (limitReached || otherActive || recommendEnabled)
     ? "Disable"
     : "Enable";
   return (
     <div
-      className={`flex items-center justify-between p-3 rounded-md mb-2 ${
+      className={`flex flex-col p-3 rounded-md mb-2 ${
         limitReached
           ? "bg-amber-900"
           : recommendEnabled
@@ -322,38 +389,47 @@ function RecommendRow({
           : "bg-slate-800"
       }`}
     >
-      <div>
-        <div className="text-[13px] font-semibold">Recommend greet</div>
-        <div
-          className={`text-[11px] ${
-            otherActive ? "text-slate-400 italic" : ""
-          }`}
-        >
-          {otherActive ? "Auto reply is currently running" : ""}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-[13px] font-semibold">Recommend greet</div>
+          <div
+            className={`text-[11px] ${
+              otherActive ? "text-slate-400 italic" : ""
+            }`}
+          >
+            {otherActive ? "Auto reply is currently running" : ""}
+          </div>
+          <div
+            className={`text-[11px] ${
+              limitReached
+                ? "text-amber-300"
+                : recommendEnabled
+                ? "text-sky-300"
+                : "text-slate-400"
+            }`}
+          >
+            {recommendGreeted} / {dailyLimit} today
+          </div>
         </div>
-        <div
-          className={`text-[11px] ${
+        <ButtonComponent
+          onClick={onClick}
+          text={label}
+          classNameProps={
             limitReached
-              ? "text-amber-300"
+              ? "!bg-amber-700 !cursor-not-allowed hover:!bg-amber-700"
               : recommendEnabled
-              ? "text-sky-300"
-              : "text-slate-400"
-          }`}
-        >
-          {recommendGreeted} / {dailyLimit} today
-        </div>
+              ? "!bg-rose-600 hover:!bg-rose-500"
+              : "!bg-sky-600 hover:!bg-sky-500"
+          }
+          disabled={toggling || limitReached || otherActive || positionEmpty}
+        />
       </div>
-      <ButtonComponent
-        onClick={onClick}
-        text={label}
-        classNameProps={
-          limitReached
-            ? "!bg-amber-700 !cursor-not-allowed hover:!bg-amber-700"
-            : recommendEnabled
-            ? "!bg-rose-600 hover:!bg-rose-500"
-            : "!bg-sky-600 hover:!bg-sky-500"
-        }
-        disabled={toggling || limitReached || otherActive}
+      <input
+        type="text"
+        value={position}
+        onChange={(e) => onPositionChange(e.target.value)}
+        placeholder="Position (e.g. Java)"
+        className="mt-2 bg-slate-700 text-white text-[11px] p-1.5 rounded w-full placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
       />
     </div>
   );
