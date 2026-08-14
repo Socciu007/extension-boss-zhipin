@@ -134,6 +134,14 @@ export default function App() {
     // Flush so the SW guard sees the latest position (storage is the
     // source of truth for the empty-check).
     await flushPositionDebounce();
+    // Defensive guard: the Enable button is already disabled when
+    // position is empty, but a stray click (or future bug) could still
+    // fire this handler. Surface a clear message instead of silently
+    // hitting the SW guard.
+    if (position.trim() === "") {
+      showToast("Please fill in the job position!", "warning");
+      return;
+    }
     if (state.recommendReachedDailyLimit && !state.recommendEnabled) {
       showToast(
         `Reached daily limit ${state.dailyLimit} greets/day. Please try again tomorrow.`,
