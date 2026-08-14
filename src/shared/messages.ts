@@ -94,6 +94,9 @@ type SwToPopup = {
   // Recommend-greet loop state
   recommendEnabled: boolean
   recommendGreeted: number // how many candidates greeted today
+  // Current value of the user-entered position for recommend-greet.
+  // Sourced from Persisted.config.recommendPosition. Empty string when unset.
+  recommendPosition: string
 }
 
 export type {
