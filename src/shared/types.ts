@@ -6,6 +6,7 @@ type AppConfig = {
   throttleMaxMs: number // default5000
   dailyLimit: number // default200
   systemPrompt: string // hardcode, không expose UI
+  recommendPosition: string // user-entered target position for recommend-greet loop; "" if unset
 }
 
 type Conversation = {
@@ -48,6 +49,7 @@ const DEFAULT_CONFIG: AppConfig = {
   throttleMaxMs: 5000,
   dailyLimit: 50,
   systemPrompt: '',
+  recommendPosition: '',
 }
 
 const DEFAULT_PERSISTED: Persisted = {
