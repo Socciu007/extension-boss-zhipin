@@ -181,7 +181,11 @@ export default function App() {
   };
 
   const handlePositionChange = (next: string) => {
-    setPosition(next);
+    // Trim locally so the visible input matches what's persisted. Prevents
+    // trailing-whitespace UX where the input shows "Java " while storage
+    // holds "Java".
+    const trimmed = next.trim();
+    setPosition(trimmed);
     if (positionDebounceRef.current !== null) {
       clearTimeout(positionDebounceRef.current.timer);
     }
@@ -189,12 +193,12 @@ export default function App() {
       chrome.runtime
         .sendMessage({
           type: "UPDATE_CONFIG",
-          config: { recommendPosition: next.trim() },
+          config: { recommendPosition: trimmed },
         } satisfies PopupToSw)
         .catch((e) => console.warn("[popup] UPDATE_CONFIG failed", e));
       positionDebounceRef.current = null;
     }, 400);
-    positionDebounceRef.current = { timer, value: next.trim() };
+    positionDebounceRef.current = { timer, value: trimmed };
   };
 
   // Flush any pending position debounce before toggling recommend. The SW
